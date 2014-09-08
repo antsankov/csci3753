@@ -1,7 +1,7 @@
 #MAKE file only compiles files that have't changed
 
 
-obj-m += Hello.o
+obj-m += rkit.o
 #create an object called hello.o
 
 #kernel source code -- so we can compile the kernel 
