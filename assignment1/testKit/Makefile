@@ -6,7 +6,7 @@ obj-m += Hello.o
 
 #kernel source code -- so we can compile the kernel 
 #this compiles the source code while we are in the source code 
-KDIR = /usr/src/linux-headers-3.2.0-60-generic-pae
+KDIR = /usr/src/linux-headers-3.11.0-12-generic
 
 all:
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules

