@@ -1,2 +1,2 @@
-/home/user/Downloads/testKit/Hello.ko
-/home/user/Downloads/testKit/Hello.o
+/home/user/csci3753/assignment1/testKit/Hello.ko
+/home/user/csci3753/assignment1/testKit/Hello.o

@@ -6,6 +6,11 @@
 *.exe
 *.o
 *.so
+*.cmd
+*.d
+*.order
+*.symvers
+*.ko
 #
 # # Packages #
 # ############
