@@ -6,7 +6,7 @@ LFLAGS = -Wall -Wextra -pthread
 
 all: lookup queueTest pthread-hello multi-lookup
 
-multi-lookup: multi-lookup.o
+multi-lookup: multi-lookup.o queue.o util.o
 	$(CC) $(LFLAGS) $^ -o $@
 
 lookup: lookup.o queue.o util.o
