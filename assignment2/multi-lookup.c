@@ -14,8 +14,17 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
+
 condt empty,fill;
 mutex_t mutex;  
+
+//position in queue
+int count = 0; 
+
+
+
+//declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
+char array[SBUFSIZE][255];
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
@@ -66,7 +75,7 @@ void *consumer(void *arg)
 	}
 }
 
-void lookup(int inputParam, int outputParam){
+void lookup(char arr[]){
 
  /* Local Vars */
     FILE* inputfp = NULL;
