@@ -36,20 +36,35 @@ int main(int argc, char* argv[]){
 void *producer(void *arg) {
 	int loops = (int) arg;
 	int i; 
-	for (i = 0; i < loops, i++){
-		pthread_mutex_lock(&mutex)
+	for (i = 0; i < loops; i++){
+		pthread_mutex_lock(&mutex);
 		while (count == SBUFSIZE){
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
 		put(i);
 		pthread_cond_signal(&fill);
-		pthread_mutex_unlock(&mutex)
+		pthread_mutex_unlock(&mutex);
 
 	}
 }
 
-
+void *consumer(void *arg)
+{
+	int i;
+	int loops (int) arg;
+	for(i = 0; i < loops; i++)
+	{
+		pthread_mutex_lock(&mutex);
+		while(count == 0){
+			pthread_cond_wait(&full, &mutex);
+		}
+		//define this 
+		get(i);
+		pthread_cond_signal(&empty);		
+		pthread_mutex_unlock(&mutex);
+	}
+}
 
 void lookup(int inputParam, int outputParam){
 
