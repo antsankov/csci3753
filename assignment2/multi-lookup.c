@@ -14,6 +14,8 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
+condt empty,fill;
+mutex_t mutex;  
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
@@ -31,6 +33,24 @@ int main(int argc, char* argv[]){
     }
 }
 
+void *producer(void *arg) {
+	int loops = (int) arg;
+	int i; 
+	for (i = 0; i < loops, i++){
+		pthread_mutex_lock(&mutex)
+		while (count == SBUFSIZE){
+			pthread_cond_wait(&empty,&mutex);
+		}
+		//define this
+		put(i);
+		pthread_cond_signal(&fill);
+		pthread_mutex_unlock(&mutex)
+
+	}
+}
+
+
+
 void lookup(int inputParam, int outputParam){
 
  /* Local Vars */
@@ -38,9 +58,7 @@ void lookup(int inputParam, int outputParam){
     FILE* outputfp = NULL;
     char hostname[SBUFSIZE];
     char errorstr[SBUFSIZE];
-    char firstipstr[INET6_ADDRSTRLEN];
-    int i;
-  
+    char firstipstr[INET6_ADDRSTRLEN];  
 
     /* Open Output File */
     outputfp = fopen(outputParam, "w");
