@@ -19,12 +19,14 @@ condt empty,fill;
 mutex_t mutex;  
 
 //position in queue
-int count = 0; 
+int count = 0;
+//boolean for if the job is finished.
+int finished = 0;
 
 
 
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
-char array[SBUFSIZE][255];
+char array[32][SBUFSIZE];
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
@@ -43,15 +45,17 @@ int main(int argc, char* argv[]){
 }
 
 void *producer(void *arg) {
-	int loops = (int) arg;
-	int i; 
-	for (i = 0; i < loops; i++){
+	
+	FILE* inputfp = *arg;
+	//as long as there are things to produce
+	while(!finished){
 		pthread_mutex_lock(&mutex);
+		//buffer is full, wait
 		while (count == SBUFSIZE){
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
-		put(i);
+		produce(inputfp);
 		pthread_cond_signal(&fill);
 		pthread_mutex_unlock(&mutex);
 
@@ -60,22 +64,42 @@ void *producer(void *arg) {
 
 void *consumer(void *arg)
 {
-	int i;
-	int loops (int) arg;
-	for(i = 0; i < loops; i++)
+	FILE* outputfp = *arg;
+	//as long as there are things to produce and something to consume
+	while(!finished || count > 0)
 	{
 		pthread_mutex_lock(&mutex);
 		while(count == 0){
 			pthread_cond_wait(&full, &mutex);
 		}
 		//define this 
-		get(i);
+		consume(outputfp);
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
 	}
 }
 
-void lookup(char arr[]){
+void produce(FILE* inputfp)
+{
+	char hostname[SBUFSIZE];
+	if(fscanf(inputfp, INPUTFS, hostname) > 0)
+	{
+		array[count][0] = hostname;
+		count++;
+	}
+	else
+	{
+		finished = 1;
+	}
+}
+
+void consume(FILE* outputfp)
+{
+
+}
+
+
+void lookup(int inputParam, int outputParam){
 
  /* Local Vars */
     FILE* inputfp = NULL;
@@ -102,10 +126,9 @@ void lookup(char arr[]){
 	/* Read File and Process*/
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 	
-	    
 		//this is where we will be making the jobs 
 	    /* Lookup hostname and get IP string */
-	    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
+	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 			fprintf(stderr, "dnslookup error: %s\n", hostname);
 			strncpy(firstipstr, "", sizeof(firstipstr));
 	    }
