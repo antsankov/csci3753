@@ -25,7 +25,7 @@ int count = 0;
 //boolean for if the job is finished.
 int finished = 0;
 //number of producer threads
-int requester_threads = 1
+int producer_threads = 1
 
 
 
@@ -40,44 +40,46 @@ int main(int argc, char* argv[]){
 	fprintf(stderr,
 		"error: queue_init failed!\n");
     }
-    //test to reiterate arguments
-	int test;
-	for (test = 1; test < argc; ++test){
-		printf("Arg is: %s \n",argv[test]);
-	}
 
 	//create producer array
-	pthread_t requesters[MAXARGS];
+	pthread_t producers[MAXARGS];
 	int status, i;
-	/* Loop Through arguments, creating a producer thread for each name file */
+	/* Loop Through arguments for input files only!, creating a producer thread for each name file */
     for(i=1; i<(argc-1); i++){
-    	spawn(argv[i],requesters[i]);
-    	//count 1+number of spawned requestors
-    	requester_threads++;
+    	FILE* inputfp = NULL;
+		inputfp = fopen(argv[i], "r");
+		
+		if(!inputfp){
+		    sprintf(errorstr, "Error Opening Input File");
+		    perror(errorstr);
+		}
+		pthread_create(&producers[i], NULL, producer, inputfp);
+	    //count 1+number of spawned requestors
+	    producer_threads++;
     }
+
     //Open Output File
     outputfp = fopen(argv[(argc-1)], "w");
     if(!outputfp){
 		perror("Error Opening Output File");
 		return EXIT_FAILURE;
     }
+
     //Create NUM_THREADS consumers
-    pthread_t resolvers[NUM_THREADS]
-    for(i=0; i < NUM_THREADS ; i++)
-    {
-    	pthread_create(resolvers[i], NULL, consumer, outputfp);
+    pthread_t consumers[NUM_THREADS]
+
+    for(i=0; i < NUM_THREADS ; i++){
+    	pthread_create(consumers[i], NULL, consumer, outputfp);
     }
-    //loop join on all the requester threads
+    //loop join on all the producer threads
     //note that i specifically starts at 1
-    for(i=1; i < requester_threads; i++){
-    	join(requesters[i], NULL);
+    for(i=1; i < producer_threads; i++){
+    	pthread_join(producers[i], NULL);
     }
-    //loop join on all the resolver threads
+    //loop join on all the consumer threads
     for(i=0; i < NUM_THREADS; i++){
-    	join(resolvers[i], NULL);
+    	pthread_join(consumers[i], NULL);
     }
-
-
 
     /* Check Arguments */
     if(argc < MINARGS){
@@ -89,6 +91,15 @@ int main(int argc, char* argv[]){
 
 }
 
+//spawns the actual producer thread with the correct input parameter 
+void spawn(int inputParam, *pthread_t t){
+	
+}
+
+
+
+//Every producer thread has its own producer 
+/*This is the producer thread*/
 void *producer(void *arg) {
 	
 	FILE* inputfp = *arg;
@@ -104,10 +115,14 @@ void *producer(void *arg) {
 		pthread_cond_signal(&fill);
 		pthread_mutex_unlock(&mutex);
 	}
+	/* Close Input File */
+	fclose(inputfp);
+	
 	//nothing left in the thread file. Time to exit.
 	pthread_exit();
 }
 
+/*This is the consumer thread*/
 void *consumer(void *arg)
 {
 	FILE* outputfp = *arg;
@@ -126,6 +141,7 @@ void *consumer(void *arg)
 	pthread_exit();
 }
 
+/*This is the method that actually does work and is called by producer thread*/
 void produce(FILE* inputfp)
 {
 	char hostname[SBUFSIZE];
@@ -146,27 +162,6 @@ void consume(FILE* outputfp)
 {
 
 }
-
-//spawns a producer thread
-void spawn(int inputParam, *pthread_t t){
-	FILE* inputfp = NULL;
-
-	inputfp = fopen(inputParam, "r");
-	
-	if(!inputfp){
-	    sprintf(errorstr, "Error Opening Input File");
-	    perror(errorstr);
-	}
-
-	pthread_create(&t, NULL, producer, inputfp);
-}
-
-
-
-
-
-
-
 
 
 
