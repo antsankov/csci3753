@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "util.h"
+#include "queue.h"
 
 //right now this is hardcoded to 4, maybe find some way to check procs for e.c?
 #define NUM_THREADS 4
@@ -16,7 +17,7 @@
 
 
 condt empty,fill;
-mutex_t mutex;  
+mutex_t mutex;
 
 //position in queue
 int count = 0;
@@ -26,15 +27,28 @@ int finished = 0;
 
 
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
-char array[32][SBUFSIZE];
+queue q;
+
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
-
+	//build the queue
+	if(queue_init(&q, SBUFSIZE) == QUEUE_FAILURE){
+	fprintf(stderr,
+		"error: queue_init failed!\n");
+    }
+    //
 	int test;
 	for (test = 1; test < argc; ++test){
 		printf("Arg is: %s \n",argv[test]);
 	}
+
+/* Loop Through arguments */
+    for(i=1; i<(argc-1); i++){
+    	lookup(argv[i], argv[(argc-1)]);
+    }
+
+
 
     /* Check Arguments */
     if(argc < MINARGS){
@@ -42,6 +56,8 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
 		return EXIT_FAILURE;
     }
+
+
 }
 
 void *producer(void *arg) {
@@ -126,7 +142,9 @@ void lookup(int inputParam, int outputParam){
 	/* Read File and Process*/
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 	
-		//this is where we will be making the jobs 
+		//this is where we will be making the jobs
+		//spawn a producer thread while theres a producer to spawn
+		
 	    /* Lookup hostname and get IP string */
 	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 			fprintf(stderr, "dnslookup error: %s\n", hostname);
