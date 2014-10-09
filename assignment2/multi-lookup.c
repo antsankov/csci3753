@@ -11,6 +11,7 @@
 #define NUM_THREADS 4
 
 #define MINARGS 3
+#define MAXARGS 127
 #define USAGE "<inputFilePath> <outputFilePath>"
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
@@ -23,6 +24,8 @@ mutex_t mutex;
 int count = 0;
 //boolean for if the job is finished.
 int finished = 0;
+//number of producer threads
+int requester_threads = 1
 
 
 
@@ -37,15 +40,41 @@ int main(int argc, char* argv[]){
 	fprintf(stderr,
 		"error: queue_init failed!\n");
     }
-    //
+    //test to reiterate arguments
 	int test;
 	for (test = 1; test < argc; ++test){
 		printf("Arg is: %s \n",argv[test]);
 	}
 
-/* Loop Through arguments, creating a producer thread for each name file */
+	//create producer array
+	pthread_t requesters[MAXARGS];
+	int status, i;
+	/* Loop Through arguments, creating a producer thread for each name file */
     for(i=1; i<(argc-1); i++){
-    	lookup(argv[i], argv[(argc-1)]);
+    	spawn(argv[i],requesters[i]);
+    	//count 1+number of spawned requestors
+    	requester_threads++;
+    }
+    //Open Output File
+    outputfp = fopen(argv[(argc-1)], "w");
+    if(!outputfp){
+		perror("Error Opening Output File");
+		return EXIT_FAILURE;
+    }
+    //Create NUM_THREADS consumers
+    pthread_t resolvers[NUM_THREADS]
+    for(i=0; i < NUM_THREADS ; i++)
+    {
+    	pthread_create(resolvers[i], NULL, consumer, outputfp);
+    }
+    //loop join on all the requester threads
+    //note that i specifically starts at 1
+    for(i=1; i < requester_threads; i++){
+    	join(requesters[i], NULL);
+    }
+    //loop join on all the resolver threads
+    for(i=0; i < NUM_THREADS; i++){
+    	join(resolvers[i], NULL);
     }
 
 
@@ -76,7 +105,7 @@ void *producer(void *arg) {
 		pthread_mutex_unlock(&mutex);
 	}
 	//nothing left in the thread file. Time to exit.
-
+	pthread_exit();
 }
 
 void *consumer(void *arg)
@@ -94,6 +123,7 @@ void *consumer(void *arg)
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
 	}
+	pthread_exit();
 }
 
 void produce(FILE* inputfp)
@@ -102,9 +132,9 @@ void produce(FILE* inputfp)
 	if(fscanf(inputfp, INPUTFS, hostname) > 0)
 	{
 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
-			//fail
+			//fail, handle this
 		}
-		//succeed
+		count++
 	}
 	else
 	{
@@ -128,9 +158,8 @@ void spawn(int inputParam, *pthread_t t){
 	    perror(errorstr);
 	}
 
-	pthread_create(&t, NULL, )
+	pthread_create(&t, NULL, producer, inputfp);
 }
-
 
 
 
