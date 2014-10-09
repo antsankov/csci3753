@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
 		printf("Arg is: %s \n",argv[test]);
 	}
 
-/* Loop Through arguments */
+/* Loop Through arguments, creating a producer thread for each name file */
     for(i=1; i<(argc-1); i++){
     	lookup(argv[i], argv[(argc-1)]);
     }
@@ -67,15 +67,16 @@ void *producer(void *arg) {
 	while(!finished){
 		pthread_mutex_lock(&mutex);
 		//buffer is full, wait
-		while (count == SBUFSIZE){
+		while (queue_is_full(&q)){
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
 		produce(inputfp);
 		pthread_cond_signal(&fill);
 		pthread_mutex_unlock(&mutex);
-
 	}
+	//nothing left in the thread file. Time to exit.
+
 }
 
 void *consumer(void *arg)
@@ -85,7 +86,7 @@ void *consumer(void *arg)
 	while(!finished || count > 0)
 	{
 		pthread_mutex_lock(&mutex);
-		while(count == 0){
+		while(queue_is_empty(&q)){
 			pthread_cond_wait(&full, &mutex);
 		}
 		//define this 
@@ -100,8 +101,10 @@ void produce(FILE* inputfp)
 	char hostname[SBUFSIZE];
 	if(fscanf(inputfp, INPUTFS, hostname) > 0)
 	{
-		array[count][0] = hostname;
-		count++;
+		if(queue_push(&q, hostname) == QUEUE_FAILURE){
+			//fail
+		}
+		//succeed
 	}
 	else
 	{
@@ -113,6 +116,32 @@ void consume(FILE* outputfp)
 {
 
 }
+
+//spawns a producer thread
+void spawn(int inputParam, *pthread_t t){
+	FILE* inputfp = NULL;
+
+	inputfp = fopen(inputParam, "r");
+	
+	if(!inputfp){
+	    sprintf(errorstr, "Error Opening Input File");
+	    perror(errorstr);
+	}
+
+	pthread_create(&t, NULL, )
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void lookup(int inputParam, int outputParam){
