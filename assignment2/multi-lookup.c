@@ -16,7 +16,6 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
-
 condt empty,fill;
 mutex_t mutex;
 
@@ -35,17 +34,26 @@ queue q;
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
-	//build the queue
-	if(queue_init(&q, SBUFSIZE) == QUEUE_FAILURE){
-	fprintf(stderr,
-		"error: queue_init failed!\n");
+
+	/* Check Arguments */
+    if(argc < MINARGS){
+		fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
+		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
+		return EXIT_FAILURE;
     }
 
+	//build the queue
+	if(queue_init(&q, SBUFSIZE) == QUEUE_FAILURE){
+		fprintf(stderr,"error: queue_init failed!\n");
+    }
+    //this is to the end of the input file index in the args
+    int inputEnd = (argc-2);
 	//create producer array
 	pthread_t producers[MAXARGS];
+
 	int status, i;
 	/* Loop Through arguments for input files only!, creating a producer thread for each name file */
-    for(i=1; i<(argc-1); i++){
+    for(i=1; i <= inputEnd; i++){
     	FILE* inputfp = NULL;
 		inputfp = fopen(argv[i], "r");
 		
@@ -53,7 +61,8 @@ int main(int argc, char* argv[]){
 		    sprintf(errorstr, "Error Opening Input File");
 		    perror(errorstr);
 		}
-		pthread_create(&producers[i], NULL, producer, inputfp);
+		pthread_create(&producers[i], NULL, producer, (void *) inputfp);
+	    
 	    //count 1+number of spawned requestors
 	    producer_threads++;
     }
@@ -69,33 +78,27 @@ int main(int argc, char* argv[]){
     pthread_t consumers[NUM_THREADS]
 
     for(i=0; i < NUM_THREADS ; i++){
-    	pthread_create(consumers[i], NULL, consumer, outputfp);
+    	pthread_create(consumers[i], NULL, consumer, (void *) outputfp);
     }
+
     //loop join on all the producer threads
     //note that i specifically starts at 1
     for(i=1; i < producer_threads; i++){
     	pthread_join(producers[i], NULL);
     }
+    `
+    finished = 1; 
+
     //loop join on all the consumer threads
     for(i=0; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
     }
 
-    /* Check Arguments */
-    if(argc < MINARGS){
-		fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
-		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
-		return EXIT_FAILURE;
-    }
+    /* Close Output File */
+    fclose(outputfp);
 
-
+    return EXIT_SUCCESS;
 }
-
-//spawns the actual producer thread with the correct input parameter 
-void spawn(int inputParam, *pthread_t t){
-	
-}
-
 
 
 //Every producer thread has its own producer 
@@ -104,6 +107,7 @@ void *producer(void *arg) {
 	
 	FILE* inputfp = *arg;
 	//as long as there are things to produce
+	
 	while(!finished){
 		pthread_mutex_lock(&mutex);
 		//buffer is full, wait
@@ -116,8 +120,7 @@ void *producer(void *arg) {
 		pthread_mutex_unlock(&mutex);
 	}
 	/* Close Input File */
-	fclose(inputfp);
-	
+	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
 	pthread_exit();
 }
@@ -145,22 +148,36 @@ void *consumer(void *arg)
 void produce(FILE* inputfp)
 {
 	char hostname[SBUFSIZE];
-	if(fscanf(inputfp, INPUTFS, hostname) > 0)
-	{
+	if(fscanf(inputfp, INPUTFS, hostname) > 0){
 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
-			//fail, handle this
+			sprintf(errorstr,"Couldn't push onto queue");
 		}
 		count++
 	}
-	else
-	{
-		finished = 1;
+	else {
+		//finished = 1;
 	}
 }
 
-void consume(FILE* outputfp)
-{
+void consume(FILE* outputfp){
 
+	//we can redef later.
+	char firstipstr[INET6_ADDRSTRLEN];
+
+	while(!queue_is_empty(&q)){
+		
+		hostname = queue_pop(&q);
+
+	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
+			fprintf(stderr, "dnslookup error: %s\n", hostname);
+			strncpy(firstipstr, "", sizeof(firstipstr));
+	    }
+
+		else{	
+	    	/* Write to Output File */
+	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+		}
+	}
 }
 
 
@@ -199,20 +216,16 @@ void lookup(int inputParam, int outputParam){
 		//spawn a producer thread while theres a producer to spawn
 		
 	    /* Lookup hostname and get IP string */
-	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
+	    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 			fprintf(stderr, "dnslookup error: %s\n", hostname);
 			strncpy(firstipstr, "", sizeof(firstipstr));
 	    }
+
 		else{	
 	    	/* Write to Output File */
 	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
 		}
 	}
-
-	/* Close Input File */
-	fclose(inputfp);
-    /* Close Output File */
-    fclose(outputfp);
 }
 
 //Rahat producer code:
