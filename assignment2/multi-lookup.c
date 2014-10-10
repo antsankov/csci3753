@@ -16,7 +16,7 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
-condt empty,fill;
+condt empty,full;
 mutex_t mutex;
 
 //position in queue
@@ -86,11 +86,11 @@ int main(int argc, char* argv[]){
     for(i=1; i < producer_threads; i++){
     	pthread_join(producers[i], NULL);
     }
-    `
+    
     finished = 1; 
 
     //loop join on all the consumer threads
-    for(i=0; i < NUM_THREADS; i++){
+    for(i=0 ; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
     }
 
@@ -104,19 +104,19 @@ int main(int argc, char* argv[]){
 //Every producer thread has its own producer 
 /*This is the producer thread*/
 void *producer(void *arg) {
-	
+	char hostname[SBUFSIZE];
 	FILE* inputfp = *arg;
 	//as long as there are things to produce
 	
-	while(!finished){
+	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 		pthread_mutex_lock(&mutex);
 		//buffer is full, wait
 		while (queue_is_full(&q)){
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
-		produce(inputfp);
-		pthread_cond_signal(&fill);
+		queue_push(&q, hostname);
+		pthread_cond_signal(&full);
 		pthread_mutex_unlock(&mutex);
 	}
 	/* Close Input File */
@@ -128,6 +128,7 @@ void *producer(void *arg) {
 /*This is the consumer thread*/
 void *consumer(void *arg)
 {
+	char hostname[SBUFSIZE];
 	FILE* outputfp = *arg;
 	//as long as there are things to produce and something to consume
 	while(!finished || count > 0)
@@ -136,28 +137,24 @@ void *consumer(void *arg)
 		while(queue_is_empty(&q)){
 			pthread_cond_wait(&full, &mutex);
 		}
-		//define this 
-		consume(outputfp);
+		hostname = queue_pop(&q);
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
+		consume(outputfp, hostname);
 	}
 	pthread_exit();
 }
 
-/*This is the method that actually does work and is called by producer thread*/
-void produce(FILE* inputfp)
-{
-	char hostname[SBUFSIZE];
-	if(fscanf(inputfp, INPUTFS, hostname) > 0){
-		if(queue_push(&q, hostname) == QUEUE_FAILURE){
-			sprintf(errorstr,"Couldn't push onto queue");
-		}
-		count++
-	}
-	else {
-		//finished = 1;
-	}
-}
+// /*This is the method that actually does work and is called by producer thread*/
+// void produce(char[] hostname)
+// {
+// 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
+// 			sprintf(errorstr,"Couldn't push onto queue");
+// 		}
+// 		else {
+// 			count++;
+// 		}
+// }
 
 void consume(FILE* outputfp){
 
@@ -165,9 +162,6 @@ void consume(FILE* outputfp){
 	char firstipstr[INET6_ADDRSTRLEN];
 
 	while(!queue_is_empty(&q)){
-		
-		hostname = queue_pop(&q);
-
 	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 			fprintf(stderr, "dnslookup error: %s\n", hostname);
 			strncpy(firstipstr, "", sizeof(firstipstr));
@@ -179,10 +173,6 @@ void consume(FILE* outputfp){
 		}
 	}
 }
-
-
-
-
 
 
 void lookup(int inputParam, int outputParam){

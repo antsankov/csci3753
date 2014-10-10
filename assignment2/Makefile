@@ -33,6 +33,9 @@ queue.o: queue.c queue.h
 util.o: util.c util.h
 	$(CC) $(CFLAGS) $<
 
+queue.o: queue.c queue.h
+	$(CC) $(CFLAGS) $<
+	
 pthread-hello.o: pthread-hello.c
 	$(CC) $(CFLAGS) $<
 
