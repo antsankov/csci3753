@@ -16,25 +16,95 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
-condt empty,full;
-mutex_t mutex;
+pthread_cond_t empty,full;
+pthread_mutex_t mutex_t,mutex;
 
+char errorstr[SBUFSIZE];
 //position in queue
 int count = 0;
 //boolean for if the job is finished.
 int finished = 0;
 //number of producer threads
-int producer_threads = 1
-
-
+int producer_threads = 1;
 
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
 queue q;
 
+void consume(FILE* outputfp, char hostname[]){
+	//we can redef later.
+	char firstipstr[INET6_ADDRSTRLEN];
+
+	while(!queue_is_empty(&q)){
+		if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
+			fprintf(stderr, "dnslookup error: %s\n", hostname);
+			strncpy(firstipstr, "", sizeof(firstipstr));
+	    }
+
+		else{	
+	    	/* Write to Output File */
+	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+		}
+	}
+}
+
+//Every producer thread has its own producer 
+/*This is the producer thread*/
+void *producer(void *arg) {
+	char hostname[SBUFSIZE];
+	FILE* inputfp = arg;
+	//as long as there are things to produce
+	
+	while(fscanf(inputfp, INPUTFS, hostname) > 0){
+		pthread_mutex_lock(&mutex);
+		//buffer is full, wait
+		while (queue_is_full(&q)){
+			pthread_cond_wait(&empty,&mutex);
+		}
+		//define this
+		queue_push(&q, hostname);
+		pthread_cond_signal(&full);
+		pthread_mutex_unlock(&mutex);
+	}
+	/* Close Input File */
+	fclose(inputfp);	
+	//nothing left in the thread file. Time to exit.
+	pthread_exit(arg);
+}
+
+/*This is the consumer thread*/
+void *consumer(void *arg)
+{
+	FILE* outputfp = arg;
+	//as long as there are things to produce and something to consume
+	while(!finished || count > 0)
+	{
+		pthread_mutex_lock(&mutex);
+		while(queue_is_empty(&q)){
+			pthread_cond_wait(&full, &mutex);
+		}
+		void * hostname = queue_pop(&q);
+		pthread_cond_signal(&empty);		
+		pthread_mutex_unlock(&mutex);
+		consume(outputfp, hostname);
+	}
+	pthread_exit(arg);
+}
+
+// /*This is the method that actually does work and is called by producer thread*/
+// void produce(char[] hostname)
+// {
+// 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
+// 			sprintf(errorstr,"Couldn't push onto queue");
+// 		}
+// 		else {
+// 			count++;
+// 		}
+// }
+
 
 int main(int argc, char* argv[]){
 	printf("Hello, this is the main!\n");
-
+	FILE* outputfp = NULL;
 	/* Check Arguments */
     if(argc < MINARGS){
 		fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
@@ -51,7 +121,7 @@ int main(int argc, char* argv[]){
 	//create producer array
 	pthread_t producers[MAXARGS];
 
-	int status, i;
+	int i;
 	/* Loop Through arguments for input files only!, creating a producer thread for each name file */
     for(i=1; i <= inputEnd; i++){
     	FILE* inputfp = NULL;
@@ -75,10 +145,10 @@ int main(int argc, char* argv[]){
     }
 
     //Create NUM_THREADS consumers
-    pthread_t consumers[NUM_THREADS]
+    pthread_t consumers[NUM_THREADS];
 
     for(i=0; i < NUM_THREADS ; i++){
-    	pthread_create(consumers[i], NULL, consumer, (void *) outputfp);
+    	pthread_create(&consumers[i], NULL, consumer, (void *) outputfp);
     }
 
     //loop join on all the producer threads
@@ -100,148 +170,3 @@ int main(int argc, char* argv[]){
     return EXIT_SUCCESS;
 }
 
-
-//Every producer thread has its own producer 
-/*This is the producer thread*/
-void *producer(void *arg) {
-	char hostname[SBUFSIZE];
-	FILE* inputfp = *arg;
-	//as long as there are things to produce
-	
-	while(fscanf(inputfp, INPUTFS, hostname) > 0){
-		pthread_mutex_lock(&mutex);
-		//buffer is full, wait
-		while (queue_is_full(&q)){
-			pthread_cond_wait(&empty,&mutex);
-		}
-		//define this
-		queue_push(&q, hostname);
-		pthread_cond_signal(&full);
-		pthread_mutex_unlock(&mutex);
-	}
-	/* Close Input File */
-	fclose(inputfp);	
-	//nothing left in the thread file. Time to exit.
-	pthread_exit();
-}
-
-/*This is the consumer thread*/
-void *consumer(void *arg)
-{
-	char hostname[SBUFSIZE];
-	FILE* outputfp = *arg;
-	//as long as there are things to produce and something to consume
-	while(!finished || count > 0)
-	{
-		pthread_mutex_lock(&mutex);
-		while(queue_is_empty(&q)){
-			pthread_cond_wait(&full, &mutex);
-		}
-		hostname = queue_pop(&q);
-		pthread_cond_signal(&empty);		
-		pthread_mutex_unlock(&mutex);
-		consume(outputfp, hostname);
-	}
-	pthread_exit();
-}
-
-// /*This is the method that actually does work and is called by producer thread*/
-// void produce(char[] hostname)
-// {
-// 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
-// 			sprintf(errorstr,"Couldn't push onto queue");
-// 		}
-// 		else {
-// 			count++;
-// 		}
-// }
-
-void consume(FILE* outputfp){
-
-	//we can redef later.
-	char firstipstr[INET6_ADDRSTRLEN];
-
-	while(!queue_is_empty(&q)){
-	    if(dnslookup , firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
-			fprintf(stderr, "dnslookup error: %s\n", hostname);
-			strncpy(firstipstr, "", sizeof(firstipstr));
-	    }
-
-		else{	
-	    	/* Write to Output File */
-	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-		}
-	}
-}
-
-
-void lookup(int inputParam, int outputParam){
-
- /* Local Vars */
-    FILE* inputfp = NULL;
-    FILE* outputfp = NULL;
-    char hostname[SBUFSIZE];
-    char errorstr[SBUFSIZE];
-    char firstipstr[INET6_ADDRSTRLEN];  
-
-    /* Open Output File */
-    outputfp = fopen(outputParam, "w");
-    if(!outputfp){
-		perror("Error Opening Output File");
-		return EXIT_FAILURE;
-    }
-
-	inputfp = fopen(inputParam, "r");
-	
-	if(!inputfp){
-	    sprintf(errorstr, "Error Opening Input File");
-	    perror(errorstr);
-	}
-	
-
-	/* Read File and Process*/
-	while(fscanf(inputfp, INPUTFS, hostname) > 0){
-	
-		//this is where we will be making the jobs
-		//spawn a producer thread while theres a producer to spawn
-		
-	    /* Lookup hostname and get IP string */
-	    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
-			fprintf(stderr, "dnslookup error: %s\n", hostname);
-			strncpy(firstipstr, "", sizeof(firstipstr));
-	    }
-
-		else{	
-	    	/* Write to Output File */
-	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-		}
-	}
-}
-
-//Rahat producer code:
-/*
-P{Produce();
-	wait(empty);
-	lock(lock);
-	===========
-	unlock(locl)
-	post(full)
-}
-
-e{
-	wait(full)
-	lock*lock
-	consume()
-	unlock(lock)
-	post(empty)
-}
-
-
-
-MultProdCon.c:
-
-sem_t empty = N;
-sem_t full = 0;
-mutex_t lock;
-
-*/
