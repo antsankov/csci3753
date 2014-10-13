@@ -9,7 +9,7 @@
 #include "queue.h"
 
 //right now this is hardcoded to 4, maybe find some way to check procs for e.c?
-#define NUM_THREADS 4
+//#define NUMTHREADS 4
 //sysconf(_SC_NPROCESSORS_ONLN);
 
 
@@ -44,6 +44,12 @@ int producer_threads = 1;
 
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
 queue q;
+
+//returns the number of cores available on the cpu
+int cores()
+{
+	return sysconf( _SC_NPROCESSORS_ONLN );
+}
 
 //Every producer thread has its own producer 
 /*This is the produvcer thread*/
@@ -164,12 +170,14 @@ void *consumer(void *arg)
 
 int main(int argc, char* argv[]){
 
-	printf("We are running with: %d cores\n",NUM_THREADS);
+	
 	FILE* outputfp = NULL;
+	int numCPU = cores();
+	printf("We are running with: %d cores\n", numCPU);
 	
 	//Declares an array of the two parameter structs
 	producer_args arg_p[MAXARGS];
-    consumer_args arg_c[NUM_THREADS];
+    consumer_args arg_c[numCPU];
 
 	/* Check Arguments */
     if(argc < MINARGS){
@@ -218,11 +226,11 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
     }
 
-    //Create NUM_THREADS consumers
-    pthread_t consumers[NUM_THREADS];
+    //Create numCPU consumers
+    pthread_t consumers[numCPU];
 
 
-    for(i=0; i < NUM_THREADS ; i++){
+    for(i=0; i < numCPU ; i++){
     	//paramters
 		arg_c[i].q = &q;
         arg_c[i].file = outputfp;
@@ -236,7 +244,7 @@ int main(int argc, char* argv[]){
     finished = 1;
     printf("###FINISHED PRODUCING###\n");
 
-    for(i=0 ; i < NUM_THREADS; i++){
+    for(i=0 ; i < numCPU; i++){
     	pthread_join(consumers[i], NULL);
     }
 
