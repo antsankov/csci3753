@@ -59,14 +59,14 @@ void *producer(void *arg) {
 		pthread_mutex_lock(&mutex);
 		
 		//buffer is full, wait
-		while (queue_is_full(&q)){
+		while (queue_is_full(parameters->q)){
 			printf("%s\n","sleep");
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
 		printf("Producer thread hostname is: %s\n",hostname );
 		//printf("before push %i\n",q.rear);
-		queue_push(q, hostname);
+		queue_push(parameters->q, hostname);
 		//printf("AFter push %i\n",q.rear);
 		pthread_cond_signal(&full);
 		pthread_mutex_unlock(&mutex);
@@ -85,20 +85,20 @@ void *consumer(void *arg)
 	char * clone;
 	consumer_args* parameters = arg;
 	FILE* outputfp = parameters->file;
-	queue* q = parameters->q;
 	char firstipstr[INET6_ADDRSTRLEN];
 
 	//as long as there are things to produce and something to consume
 	printf("CONSUMER THREAD!\n" );
 	/* While The Queue Is Not Empty */
 	while(!queue_is_empty(parameters->q) || !finished){
-
+		clone = malloc(1025*sizeof(char));
 		/* Lock The Queue So Only This Thread Can Access It */
     	pthread_mutex_lock(&mutex);
 
     	/* Get Hostname Off Queue */
     	hostname = queue_pop(parameters->q);
-    	printf("Hostname is: %s\n",hostname );
+    	strcpy(clone, hostname);
+    	//printf("Hostname is: %s\n",hostname );
     	pthread_mutex_unlock(&mutex);
     	if(hostname == NULL){
     		usleep(100);
@@ -106,10 +106,11 @@ void *consumer(void *arg)
     	else {
 	    	/* Unlock The Queue */
 
-			clone = malloc(1025*sizeof(char));
-			strcpy(clone, hostname);
+			
+			//printf("Hostname / clone is: %s / %s \n",hostname, clone );
+			
 			/* Lookup hostname and get IP string */	
-		    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
+		    if(dnslookup(clone, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 				fprintf(stderr, "dnslookup error: %s\n", hostname);
 				strncpy(firstipstr, "", sizeof(firstipstr));
 		    }
@@ -122,10 +123,9 @@ void *consumer(void *arg)
 
 		    /* Unlock Output File So Other Threads Can Write To It */
 		    pthread_mutex_unlock(&file_mutex);
-
-		    /* Free Memory Blocks On The Heap Created By hostname */
-		    free(clone);
 		}
+		/* Free Memory Blocks On The Heap Created By hostname */
+		    free(clone);
 	}
 	printf("%s\n","Were done in consumer" );
 	pthread_exit(arg);
@@ -164,7 +164,6 @@ void *consumer(void *arg)
 int main(int argc, char* argv[]){
 
 	printf("We are running with: %d cores\n",NUM_THREADS);
-	pthread_mutex_t mutex;
 	FILE* outputfp = NULL;
 	
 	//Declares an array of the two parameter structs
@@ -209,7 +208,7 @@ int main(int argc, char* argv[]){
 	    producer_threads++;
     }
 
-	printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
+	//printf("Queue IS empty: %d\n",queue_is_empty(&q));
 
     //Open Output File
     outputfp = fopen(argv[(argc-1)], "w");
@@ -221,6 +220,7 @@ int main(int argc, char* argv[]){
     //Create NUM_THREADS consumers
     pthread_t consumers[NUM_THREADS];
 
+
     for(i=0; i < NUM_THREADS ; i++){
     	//paramters
 		arg_c[i].q = &q;
@@ -228,11 +228,11 @@ int main(int argc, char* argv[]){
     	pthread_create(&consumers[i], NULL, consumer, &arg_c[i]);
     }
 
+        //kill the producers
     for(i=1; i < producer_threads; i++){
     	pthread_join(producers[i], NULL);
     }
     finished = 1;
-
 
     for(i=0 ; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
