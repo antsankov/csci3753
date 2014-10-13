@@ -9,7 +9,9 @@
 #include "queue.h"
 
 //right now this is hardcoded to 4, maybe find some way to check procs for e.c?
-//#define NUM_THREADS 4
+#define NUM_THREADS 4
+//sysconf(_SC_NPROCESSORS_ONLN);
+
 
 #define MINARGS 3
 #define MAXARGS 127
@@ -17,7 +19,6 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
-sysconf(_SC_NPROCESSORS_ONLN);
 
 typedef struct producer_args_s{
     queue* q;
@@ -28,11 +29,6 @@ typedef struct consumer_args_s{
     queue* q;
     FILE* file;
 }consumer_args;
-
-
-
-
-
 
 pthread_cond_t empty,full;
 pthread_mutex_t mutex, file_mutex;
@@ -102,26 +98,21 @@ void *consumer(void *arg)
 
     	/* Get Hostname Off Queue */
     	hostname = queue_pop(parameters->q);
-
+    	printf("Hostname is: %s\n",hostname );
+    	pthread_mutex_unlock(&mutex);
     	if(hostname == NULL){
-    		pthread_mutex_unlock(&mutex);	
     		usleep(100);
     	}
     	else {
 	    	/* Unlock The Queue */
-			pthread_mutex_unlock(&mutex);
 
-			printf("before dns lookup %s\n",hostname);
 			clone = malloc(1025*sizeof(char));
 			strcpy(clone, hostname);
-			printf("before clone %s\n",clone);
 			/* Lookup hostname and get IP string */	
 		    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 				fprintf(stderr, "dnslookup error: %s\n", hostname);
 				strncpy(firstipstr, "", sizeof(firstipstr));
 		    }
-			printf("after clone %s\n",clone);
-			printf("after dns lookup %s\n",hostname);
 
 		    /* Lock Output File In Order To Write To It */
 		    pthread_mutex_lock(&file_mutex);
