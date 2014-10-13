@@ -46,23 +46,6 @@ int producer_threads = 1;
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
 queue q;
 
-void consume(FILE* outputfp, char hostname[]){
-	//we can redef later.
-	char firstipstr[INET6_ADDRSTRLEN];
-
-
-	if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
-		fprintf(stderr, "dnslookup error: %s\n", hostname);
-		strncpy(firstipstr, "", sizeof(firstipstr));
-    }
-
-	else{	
-		printf("hostname: %s,firstipstr: %s\n", hostname, firstipstr);
-    	/* Write to Output File */
-    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-	}
-}
-
 //Every producer thread has its own producer 
 /*This is the produvcer thread*/
 void *producer(void *arg) {
@@ -105,22 +88,40 @@ void *consumer(void *arg)
 	queue* q = parameters->q;
 	//as long as there are things to produce and something to consume
 	printf("CONSUMER THREAD!\n" );
-	while(!finished || count > 0)
+	while(!finished || !(queue_is_empty(parameters->q)))
 	{
 		pthread_mutex_lock(&mutex);
-		while(queue_is_empty(&q)){
+		while(queue_is_empty(parameters->q)){
 			pthread_cond_wait(&full, &mutex);
 		}
 		//printf("Before pop %i\n",q.rear);
 		hostname = queue_pop(parameters->q);
-		printf("Hostname is: %s\n", hostname );
+
 		//printf("AFter pop %i\n",q.rear);
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
 		consume(outputfp, hostname);
 		printf("Consumed\n");
 	}
+	printf("%s\n","Were done in consumer" );
 	pthread_exit(arg);
+}
+
+void consume(FILE* outputfp, char hostname[]){
+	//we can redef later.
+	char firstipstr[INET6_ADDRSTRLEN];
+
+	printf("Hostname in consume: %s\n", &hostname );
+	if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
+		fprintf(stderr, "dnslookup error: %s\n", hostname);
+		strncpy(firstipstr, "", sizeof(firstipstr));
+    }
+	
+	else{	
+		printf("hostname: %s,firstipstr: %s\n", hostname, firstipstr);
+    	/* Write to Output File */
+    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+	}
 }
 
 // /*This is the method that actually does work and is called by producer thread*/
@@ -192,9 +193,7 @@ int main(int argc, char* argv[]){
 	    producer_threads++;
     }
 
-printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
-
-
+	printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
 
     //Open Output File
     outputfp = fopen(argv[(argc-1)], "w");
@@ -206,6 +205,11 @@ printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
     //Create NUM_THREADS consumers
     pthread_t consumers[NUM_THREADS];
 
+    for(i=1; i < producer_threads; i++){
+    	pthread_join(producers[i], NULL);
+    }
+    finished = 1;
+
     for(i=0; i < NUM_THREADS ; i++){
     	//paramters
 		arg_c[i].q = &q;
@@ -213,29 +217,6 @@ printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
     	pthread_create(&consumers[i], NULL, consumer, &arg_c[i]);
     }
 
-
-
-
-    //loop join on all the producer threads
-    //note that i specifically starts at 1
-    for(i=1; i < producer_threads; i++){
-    	pthread_join(producers[i], NULL);
-    }
-
-// printf("AFter pop %i\n",q.rear);
-// printf("%s\n",queue_pop(&q));
-// printf("%s\n",queue_pop(&q));
-// printf("%s\n",queue_pop(&q));
-// printf("%s\n",queue_pop(&q));
-// printf("AFter pop %i\n",q.rear);
-
-	while (!queue_is_empty(&q)){
-		printf("%s\n",queue_pop(&q));
-	}
-    
-    finished = 1; 
-
-    //loop join on all the consumer threads
 
     for(i=0 ; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
