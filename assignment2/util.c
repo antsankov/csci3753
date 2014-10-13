@@ -13,6 +13,8 @@
 #include "util.h"
 
 int dnslookup(const char* hostname, char* firstIPstr, int maxSize){
+	printf("Util hostname adress %s\n", &hostname);
+	printf("Util hostname  %s\n", hostname);
 
     /* Local vars */
     struct addrinfo* headresult = NULL;

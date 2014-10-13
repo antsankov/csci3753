@@ -83,9 +83,13 @@ void *producer(void *arg) {
 void *consumer(void *arg)
 {
 	void * hostname;
+	void * copy;
 	consumer_args* parameters = arg;
 	FILE* outputfp = parameters->file;
 	queue* q = parameters->q;
+	char firstipstr[INET6_ADDRSTRLEN];
+
+	strncpy(copy,hostname,500);
 	//as long as there are things to produce and something to consume
 	printf("CONSUMER THREAD!\n" );
 	while(!finished || !(queue_is_empty(parameters->q)))
@@ -100,9 +104,26 @@ void *consumer(void *arg)
 		//printf("AFter pop %i\n",q.rear);
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
-		consume(outputfp, hostname);
+
+		printf("Hostname in consume: %s\n", &hostname );
+		
+		/*CONSUME INLINE STARTED HERE*/
+
+		if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
+			fprintf(stderr, "dnslookup error: %s\n", hostname);
+			strncpy(firstipstr, "", sizeof(firstipstr));
+    	}
+
+		else{
+			printf("%s\n","SUCCESS" );	
+			printf("hostname: %s,firstipstr: %s\n", copy, firstipstr);
+	    	/* Write to Output File */
+	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+		}
 		printf("Consumed\n");
+
 	}
+
 	printf("%s\n","Were done in consumer" );
 	pthread_exit(arg);
 }
