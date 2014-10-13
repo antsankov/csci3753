@@ -16,8 +16,24 @@
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
 
+typedef struct producer_args_s{
+    queue* q;
+    FILE* file;
+}producer_args;
+
+typedef struct consumer_args_s{
+    queue* q;
+    FILE* file;
+}consumer_args;
+
+
+
+
+
+
 pthread_cond_t empty,full;
-pthread_mutex_t mutex_t,mutex;
+pthread_mutex_t mutex;
+
 
 char errorstr[SBUFSIZE];
 //position in queue
@@ -48,26 +64,32 @@ void consume(FILE* outputfp, char hostname[]){
 }
 
 //Every producer thread has its own producer 
-/*This is the producer thread*/
+/*This is the produvcer thread*/
 void *producer(void *arg) {
 	char hostname[SBUFSIZE];
-	FILE* inputfp = arg;
+	producer_args* parameters = arg;
+	FILE* inputfp = parameters->file;
+	queue* q = parameters->q;
 	//as long as there are things to produce
 	
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
+		
 		pthread_mutex_lock(&mutex);
+		
 		//buffer is full, wait
 		while (queue_is_full(&q)){
+			printf("%s\n","sleep");
 			pthread_cond_wait(&empty,&mutex);
 		}
 		//define this
 		printf("Producer thread hostname is: %s\n",hostname );
-		printf("before push %i\n",q.rear);
-		queue_push(&q, hostname);
-		printf("AFter push %i\n",q.rear);
+		//printf("before push %i\n",q.rear);
+		queue_push(q, hostname);
+		//printf("AFter push %i\n",q.rear);
 		pthread_cond_signal(&full);
 		pthread_mutex_unlock(&mutex);
 	}
+	printf("%s\n","finished");
 	/* Close Input File */
 	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
@@ -78,7 +100,9 @@ void *producer(void *arg) {
 void *consumer(void *arg)
 {
 	void * hostname;
-	FILE* outputfp = arg;
+	consumer_args* parameters = arg;
+	FILE* outputfp = parameters->file;
+	queue* q = parameters->q;
 	//as long as there are things to produce and something to consume
 	printf("CONSUMER THREAD!\n" );
 	while(!finished || count > 0)
@@ -87,11 +111,10 @@ void *consumer(void *arg)
 		while(queue_is_empty(&q)){
 			pthread_cond_wait(&full, &mutex);
 		}
-		printf("Before pop %i\n",q.rear);
-		hostname = queue_pop(&q);
+		//printf("Before pop %i\n",q.rear);
+		hostname = queue_pop(parameters->q);
 		printf("Hostname is: %s\n", hostname );
-		printf("AFter pop %i\n",q.rear);
-
+		//printf("AFter pop %i\n",q.rear);
 		pthread_cond_signal(&empty);		
 		pthread_mutex_unlock(&mutex);
 		consume(outputfp, hostname);
@@ -113,8 +136,14 @@ void *consumer(void *arg)
 
 
 int main(int argc, char* argv[]){
+
 	printf("Hello, this is the main :)\n");
+	pthread_mutex_t mutex;
 	FILE* outputfp = NULL;
+	
+	//Declares an array of the two parameter structs
+	producer_args arg_p[MAXARGS];
+    consumer_args arg_c[NUM_THREADS];
 
 	/* Check Arguments */
     if(argc < MINARGS){
@@ -128,35 +157,44 @@ int main(int argc, char* argv[]){
 		fprintf(stderr,"error: queue_init failed!\n");
     }
     
-    /*Queue tesdting */
- 	queue_push(&q,"test1");
-	queue_push(&q,"test2");
-	printf("AFter pop %i\n",q.rear);
-	printf("%s\n",queue_pop(&q));
-	printf("%s\n",queue_pop(&q));
-	printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
+ //    /*Queue tesdting */
+ // 	queue_push(&q,"test1");
+	// queue_push(&q,"test2");
+	// printf("AFter pop %i\n",q.rear);
+	// printf("%s\n",queue_pop(&q));
+	// printf("%s\n",queue_pop(&q));
+	// printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
 
 
     //this is to the end of the input file index in the args
     int inputEnd = (argc-2);
 	//create producer array
 	pthread_t producers[MAXARGS];
+	//initialize the mutex
+	pthread_mutex_init(&mutex, NULL);
 
 	int i;
 	/* Loop Through arguments for input files only!, creating a producer thread for each name file */
     for(i=1; i <= inputEnd; i++){
     	FILE* inputfp = NULL;
 		inputfp = fopen(argv[i], "r");
+		//paramters
+		arg_p[i].q = &q;
+        arg_p[i].file = inputfp;
 		
 		if(!inputfp){
 		    sprintf(errorstr, "Error Opening Input File");
 		    perror(errorstr);
 		}
-		pthread_create(&producers[i], NULL, producer, (void *) inputfp);
+		pthread_create(&producers[i], NULL, producer, &arg_p[i]);
 	    
 	    //count 1+number of spawned requestors
 	    producer_threads++;
     }
+
+printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
+
+
 
     //Open Output File
     outputfp = fopen(argv[(argc-1)], "w");
@@ -168,9 +206,12 @@ int main(int argc, char* argv[]){
     //Create NUM_THREADS consumers
     pthread_t consumers[NUM_THREADS];
 
-    // for(i=0; i < NUM_THREADS ; i++){
-    // 	pthread_create(&consumers[i], NULL, consumer, (void *) outputfp);
-    // }
+    for(i=0; i < NUM_THREADS ; i++){
+    	//paramters
+		arg_c[i].q = &q;
+        arg_c[i].file = outputfp;
+    	pthread_create(&consumers[i], NULL, consumer, &arg_c[i]);
+    }
 
 
 
@@ -181,12 +222,12 @@ int main(int argc, char* argv[]){
     	pthread_join(producers[i], NULL);
     }
 
-printf("AFter pop %i\n",q.rear);
-printf("%s\n",queue_pop(&q));
-printf("%s\n",queue_pop(&q));
-printf("%s\n",queue_pop(&q));
-printf("%s\n",queue_pop(&q));
-printf("AFter pop %i\n",q.rear);
+// printf("AFter pop %i\n",q.rear);
+// printf("%s\n",queue_pop(&q));
+// printf("%s\n",queue_pop(&q));
+// printf("%s\n",queue_pop(&q));
+// printf("%s\n",queue_pop(&q));
+// printf("AFter pop %i\n",q.rear);
 
 	while (!queue_is_empty(&q)){
 		printf("%s\n",queue_pop(&q));
@@ -195,6 +236,7 @@ printf("AFter pop %i\n",q.rear);
     finished = 1; 
 
     //loop join on all the consumer threads
+
     for(i=0 ; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
     }
