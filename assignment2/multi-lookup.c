@@ -88,7 +88,7 @@ void *consumer(void *arg)
 	char firstipstr[INET6_ADDRSTRLEN];
 
 	//as long as there are things to produce and something to consume
-	printf("CONSUMER THREAD!\n" );
+	//printf("CONSUMER THREAD!\n" );
 	/* While The Queue Is Not Empty */
 	while(!queue_is_empty(parameters->q) || !finished){
 		clone = malloc(1025*sizeof(char));
@@ -111,7 +111,7 @@ void *consumer(void *arg)
 			
 			/* Lookup hostname and get IP string */	
 		    if(dnslookup(clone, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
-				fprintf(stderr, "dnslookup error: %s\n", hostname);
+				fprintf(stderr, "dnslookup error: %s\n", clone);
 				strncpy(firstipstr, "", sizeof(firstipstr));
 		    }
 
@@ -120,6 +120,7 @@ void *consumer(void *arg)
 
 		    /* Write to Output File */
 		    fprintf(outputfp, "%s,%s\n", clone, firstipstr);
+		    printf("lookup %s : %s\n",clone, firstipstr);
 
 		    /* Unlock Output File So Other Threads Can Write To It */
 		    pthread_mutex_unlock(&file_mutex);
@@ -127,7 +128,7 @@ void *consumer(void *arg)
 		/* Free Memory Blocks On The Heap Created By hostname */
 		    free(clone);
 	}
-	printf("%s\n","Were done in consumer" );
+	printf("%s\n","consumer finished");
 	pthread_exit(arg);
 }
 
@@ -233,6 +234,7 @@ int main(int argc, char* argv[]){
     	pthread_join(producers[i], NULL);
     }
     finished = 1;
+    printf("###FINISHED PRODUCING###\n");
 
     for(i=0 ; i < NUM_THREADS; i++){
     	pthread_join(consumers[i], NULL);
