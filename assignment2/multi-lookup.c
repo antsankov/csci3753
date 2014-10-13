@@ -32,7 +32,7 @@ typedef struct consumer_args_s{
 
 
 pthread_cond_t empty,full;
-pthread_mutex_t mutex;
+pthread_mutex_t mutex, file_mutex;
 
 
 char errorstr[SBUFSIZE];
@@ -72,7 +72,7 @@ void *producer(void *arg) {
 		pthread_cond_signal(&full);
 		pthread_mutex_unlock(&mutex);
 	}
-	printf("%s\n","finished");
+	printf("%s\n","Producer finished");
 	/* Close Input File */
 	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
@@ -82,68 +82,78 @@ void *producer(void *arg) {
 /*This is the consumer thread*/
 void *consumer(void *arg)
 {
-	void * hostname;
-	void * copy;
+	char * hostname;
+	char * clone;
 	consumer_args* parameters = arg;
 	FILE* outputfp = parameters->file;
 	queue* q = parameters->q;
 	char firstipstr[INET6_ADDRSTRLEN];
 
-	strncpy(copy,hostname,500);
 	//as long as there are things to produce and something to consume
 	printf("CONSUMER THREAD!\n" );
-	while(!finished || !(queue_is_empty(parameters->q)))
-	{
-		pthread_mutex_lock(&mutex);
-		while(queue_is_empty(parameters->q)){
-			pthread_cond_wait(&full, &mutex);
-		}
-		//printf("Before pop %i\n",q.rear);
-		hostname = queue_pop(parameters->q);
+	/* While The Queue Is Not Empty */
+	while(!queue_is_empty(parameters->q) || !finished){
 
-		//printf("AFter pop %i\n",q.rear);
-		pthread_cond_signal(&empty);		
-		pthread_mutex_unlock(&mutex);
+		/* Lock The Queue So Only This Thread Can Access It */
+    	pthread_mutex_lock(&mutex);
 
-		printf("Hostname in consume: %s\n", &hostname );
-		
-		/*CONSUME INLINE STARTED HERE*/
+    	/* Get Hostname Off Queue */
+    	hostname = queue_pop(parameters->q);
 
-		if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
-			fprintf(stderr, "dnslookup error: %s\n", hostname);
-			strncpy(firstipstr, "", sizeof(firstipstr));
+    	if(hostname == NULL){
+    		pthread_mutex_unlock(&mutex);	
+    		usleep(100);
     	}
+    	else {
+	    	/* Unlock The Queue */
+			pthread_mutex_unlock(&mutex);
 
-		else{
-			printf("%s\n","SUCCESS" );	
-			printf("hostname: %s,firstipstr: %s\n", copy, firstipstr);
-	    	/* Write to Output File */
-	    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+			printf("before dns lookup %s\n",hostname);
+			clone = malloc(1025*sizeof(char));
+			strcpy(clone, hostname);
+			printf("before clone %s\n",clone);
+			/* Lookup hostname and get IP string */	
+		    if(dnslookup(hostname, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
+				fprintf(stderr, "dnslookup error: %s\n", hostname);
+				strncpy(firstipstr, "", sizeof(firstipstr));
+		    }
+			printf("after clone %s\n",clone);
+			printf("after dns lookup %s\n",hostname);
+
+		    /* Lock Output File In Order To Write To It */
+		    pthread_mutex_lock(&file_mutex);
+
+		    /* Write to Output File */
+		    fprintf(outputfp, "%s,%s\n", clone, firstipstr);
+
+		    /* Unlock Output File So Other Threads Can Write To It */
+		    pthread_mutex_unlock(&file_mutex);
+
+		    /* Free Memory Blocks On The Heap Created By hostname */
+		    free(clone);
 		}
-		printf("Consumed\n");
-
 	}
-
 	printf("%s\n","Were done in consumer" );
 	pthread_exit(arg);
 }
 
-void consume(FILE* outputfp, char hostname[]){
-	//we can redef later.
-	char firstipstr[INET6_ADDRSTRLEN];
+// void consume(FILE* outputfp, char hostname[]){
+// 	//we can redef later.
+// 	char firstipstr[INET6_ADDRSTRLEN];
 
-	printf("Hostname in consume: %s\n", &hostname );
-	if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
-		fprintf(stderr, "dnslookup error: %s\n", hostname);
-		strncpy(firstipstr, "", sizeof(firstipstr));
-    }
+// 	if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
+// 		fprintf(stderr, "dnslookup error: %s\n", hostname);
+// 		strncpy(firstipstr, "", sizeof(firstipstr));
+//     }
 	
-	else{	
-		printf("hostname: %s,firstipstr: %s\n", hostname, firstipstr);
-    	/* Write to Output File */
-    	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-	}
-}
+// 	else{
+// 		copy = hostname;
+// 		printf("Hostname in consume: %s\n", copy );	
+// 		printf("hostname: %s,firstipstr: %s\n", copy, firstipstr);
+//     	/* Write to Output File */
+//     	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+// 	}
+// }
 
 // /*This is the method that actually does work and is called by producer thread*/
 // void produce(char[] hostname)
@@ -178,16 +188,7 @@ int main(int argc, char* argv[]){
 	if(queue_init(&q, SBUFSIZE) == QUEUE_FAILURE){
 		fprintf(stderr,"error: queue_init failed!\n");
     }
-    
- //    /*Queue tesdting */
- // 	queue_push(&q,"test1");
-	// queue_push(&q,"test2");
-	// printf("AFter pop %i\n",q.rear);
-	// printf("%s\n",queue_pop(&q));
-	// printf("%s\n",queue_pop(&q));
-	// printf("qUEUE IS empty: %d\n",queue_is_empty(&q));
-
-
+   
     //this is to the end of the input file index in the args
     int inputEnd = (argc-2);
 	//create producer array
@@ -226,17 +227,17 @@ int main(int argc, char* argv[]){
     //Create NUM_THREADS consumers
     pthread_t consumers[NUM_THREADS];
 
-    for(i=1; i < producer_threads; i++){
-    	pthread_join(producers[i], NULL);
-    }
-    finished = 1;
-
     for(i=0; i < NUM_THREADS ; i++){
     	//paramters
 		arg_c[i].q = &q;
         arg_c[i].file = outputfp;
     	pthread_create(&consumers[i], NULL, consumer, &arg_c[i]);
     }
+
+    for(i=1; i < producer_threads; i++){
+    	pthread_join(producers[i], NULL);
+    }
+    finished = 1;
 
 
     for(i=0 ; i < NUM_THREADS; i++){
