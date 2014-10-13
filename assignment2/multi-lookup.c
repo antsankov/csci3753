@@ -3,18 +3,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "queue.h"
 
 //right now this is hardcoded to 4, maybe find some way to check procs for e.c?
-#define NUM_THREADS 4
+//#define NUM_THREADS 4
 
 #define MINARGS 3
 #define MAXARGS 127
 #define USAGE "<inputFilePath> <outputFilePath>"
 #define SBUFSIZE 1025
 #define INPUTFS "%1024s"
+
+sysconf(_SC_NPROCESSORS_ONLN);
 
 typedef struct producer_args_s{
     queue* q;
@@ -169,7 +172,7 @@ void *consumer(void *arg)
 
 int main(int argc, char* argv[]){
 
-	printf("Hello, this is the main :)\n");
+	printf("We are running with: %d cores\n",NUM_THREADS);
 	pthread_mutex_t mutex;
 	FILE* outputfp = NULL;
 	
