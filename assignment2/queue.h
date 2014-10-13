@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 
-#define QUEUEMAXSIZE 50
+#define QUEUEMAXSIZE 150
 
 #define QUEUE_FAILURE -1
 #define QUEUE_SUCCESS 0
