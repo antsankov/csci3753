@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 #define QUEUEMAXSIZE 50
-
+#define MAX_NAME_LENGTH 255
 #define QUEUE_FAILURE -1
 #define QUEUE_SUCCESS 0
 
@@ -33,6 +33,7 @@ typedef struct queue_s{
     int maxSize;
 } queue;
 
+char ret_payload[MAX_NAME_LENGTH];
 /* Function to initilze a new queue
  * On success, returns queue size
  * On failure, returns QUEUE_FAILURE
