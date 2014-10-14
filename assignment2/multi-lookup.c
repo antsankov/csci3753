@@ -103,13 +103,16 @@ void *consumer(void *arg)
 
     	/* Get Hostname Off Queue */
     	hostname = queue_pop(parameters->q);
+    	if(hostname == NULL){
+    		pthread_mutex_unlock(&mutex);
+    		free(clone);
+    		usleep(100);
+    		continue;
+    	}
     	strcpy(clone, hostname);
     	//printf("Hostname is: %s\n",hostname );
     	pthread_mutex_unlock(&mutex);
-    	if(hostname == NULL){
-    		usleep(100);
-    	}
-    	else {
+
 	    	/* Unlock The Queue */
 
 			
@@ -130,7 +133,7 @@ void *consumer(void *arg)
 
 		    /* Unlock Output File So Other Threads Can Write To It */
 		    pthread_mutex_unlock(&file_mutex);
-		}
+		
 		/* Free Memory Blocks On The Heap Created By hostname */
 		    free(clone);
 	}
