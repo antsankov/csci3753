@@ -23,6 +23,7 @@
 typedef struct producer_args_s{
     queue* q;
     FILE* file;
+    FILE* out;
 }producer_args;
 
 typedef struct consumer_args_s{
@@ -44,6 +45,9 @@ int producer_threads = 1;
 
 //declare a matrix of strings with a max of 1024 strings, and 200 chars max each 	
 queue q;
+char resolved[100][SBUFSIZE];
+
+int numberResolved =0;
 
 //returns the number of cores available on the cpu
 int cores()
@@ -58,8 +62,10 @@ void *producer(void *arg) {
 	producer_args* parameters = arg;
 	FILE* inputfp = parameters->file;
 	queue* q = parameters->q;
+	FILE* outputfp = parameters->out;
 	//as long as there are things to produce
-	
+	char requests[100][SBUFSIZE];
+	int numberOfElements = 0;
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 		
 		pthread_mutex_lock(&mutex);
@@ -71,6 +77,8 @@ void *producer(void *arg) {
 		}
 		//define this
 		printf("Producer thread hostname is: %s\n",hostname );
+		strcpy(requests[numberOfElements], hostname);
+		numberOfElements++;
 		//printf("before push %i\n",q.rear);
 		queue_push(parameters->q, hostname);
 		//printf("AFter push %i\n",q.rear);
@@ -81,6 +89,44 @@ void *producer(void *arg) {
 	/* Close Input File */
 	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
+	
+
+
+
+	int stopper = numberOfElements;
+	while(1){
+		if(stopper == 0){
+			printf("STOPINGNOW\n");
+			pthread_exit(arg);
+			break;
+		}
+		printf("GOing to Sleep\n");
+		usleep(250000);
+		printf("Waking up\n");
+		int x, j;
+		//this loop goes through the requests
+		for(j = 0; j < numberOfElements; j++){
+			//this goes through resolved
+			for(x = 0; x < numberResolved; x++){
+				pthread_mutex_lock(&mutex);
+				// printf("TRYINGTOWORK: j is =  %s, x is: %s\n",requests[j],resolved[x]);
+
+				if(strcmp(requests[j], resolved[x]) == 0){
+					stopper--;
+					if(stopper == 0){
+						printf("My request has been resolved: %s\n", resolved[x]);
+						strcpy(resolved[x],"foo");
+						pthread_mutex_unlock(&mutex);
+						pthread_exit(arg);
+						break;
+					}
+					printf("My request has been resolved: %s\n", resolved[x]);
+					strcpy(resolved[x],"foo");
+				}
+				pthread_mutex_unlock(&mutex);
+			}
+		}
+	}
 	pthread_exit(arg);
 }
 
@@ -130,6 +176,8 @@ void *consumer(void *arg)
 		    /* Write to Output File */
 		    fprintf(outputfp, "%s,%s\n", clone, firstipstr);
 		    printf("lookup %s : %s\n",clone, firstipstr);
+		    strcpy(resolved[numberResolved], clone);
+		    numberResolved++;
 
 		    /* Unlock Output File So Other Threads Can Write To It */
 		    pthread_mutex_unlock(&file_mutex);
@@ -205,10 +253,12 @@ int main(int argc, char* argv[]){
 	/* Loop Through arguments for input files only!, creating a producer thread for each name file */
     for(i=1; i <= inputEnd; i++){
     	FILE* inputfp = NULL;
-		inputfp = fopen(argv[i], "r");
+   		inputfp = fopen(argv[i], "r");
+		FILE* outfp = fopen(argv[argc-1], "r");
 		//paramters
 		arg_p[i].q = &q;
         arg_p[i].file = inputfp;
+        arg_p[i].out = outfp;
 		
 		if(!inputfp){
 		    sprintf(errorstr, "Error Opening Input File");
