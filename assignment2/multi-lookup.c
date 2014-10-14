@@ -62,7 +62,6 @@ void *producer(void *arg) {
 	producer_args* parameters = arg;
 	FILE* inputfp = parameters->file;
 	queue* q = parameters->q;
-	FILE* outputfp = parameters->out;
 	//as long as there are things to produce
 	char requests[100][SBUFSIZE];
 	int numberOfElements = 0;
@@ -80,7 +79,7 @@ void *producer(void *arg) {
 		strcpy(requests[numberOfElements], hostname);
 		numberOfElements++;
 		//printf("before push %i\n",q.rear);
-		queue_push(parameters->q, hostname);
+		queue_push(q, hostname);
 		//printf("AFter push %i\n",q.rear);
 		pthread_cond_signal(&full);
 		pthread_mutex_unlock(&mutex);
@@ -90,42 +89,35 @@ void *producer(void *arg) {
 	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
 	
-
-
-
 	int stopper = numberOfElements;
 	while(1){
-		if(stopper == 0){
-			printf("STOPINGNOW\n");
-			pthread_exit(arg);
-			break;
-		}
-		printf("GOing to Sleep\n");
-		usleep(250000);
-		printf("Waking up\n");
 		int x, j;
 		//this loop goes through the requests
 		for(j = 0; j < numberOfElements; j++){
 			//this goes through resolved
 			for(x = 0; x < numberResolved; x++){
+				//lock mutex for resolved array
 				pthread_mutex_lock(&mutex);
-				// printf("TRYINGTOWORK: j is =  %s, x is: %s\n",requests[j],resolved[x]);
-
+				//if the resolved hostname is equal to the requested hostname
 				if(strcmp(requests[j], resolved[x]) == 0){
+					//number of requested hostnames can be decremented because it has been resolved
 					stopper--;
+					//if there are no more requested hostnames
 					if(stopper == 0){
-						printf("My request has been resolved: %s\n", resolved[x]);
+						printf("My final request has been resolved: %s\n", resolved[x]);
 						strcpy(resolved[x],"foo");
+						//unlock and exit
 						pthread_mutex_unlock(&mutex);
 						pthread_exit(arg);
-						break;
 					}
+					//still more hostnames resolve and continue
 					printf("My request has been resolved: %s\n", resolved[x]);
 					strcpy(resolved[x],"foo");
 				}
 				pthread_mutex_unlock(&mutex);
 			}
 		}
+		usleep(250000);
 	}
 	pthread_exit(arg);
 }
@@ -140,7 +132,6 @@ void *consumer(void *arg)
 	char firstipstr[INET6_ADDRSTRLEN];
 
 	//as long as there are things to produce and something to consume
-	//printf("CONSUMER THREAD!\n" );
 	/* While The Queue Is Not Empty */
 	while(!queue_is_empty(parameters->q) || !finished){
 		clone = malloc(1025*sizeof(char));
@@ -156,14 +147,7 @@ void *consumer(void *arg)
     		continue;
     	}
     	strcpy(clone, hostname);
-    	//printf("Hostname is: %s\n",hostname );
     	pthread_mutex_unlock(&mutex);
-
-	    	/* Unlock The Queue */
-
-			
-			//printf("Hostname / clone is: %s / %s \n",hostname, clone );
-			
 			/* Lookup hostname and get IP string */	
 		    if(dnslookup(clone, firstipstr, sizeof(firstipstr)) == UTIL_FAILURE){
 				fprintf(stderr, "dnslookup error: %s\n", clone);
@@ -176,6 +160,8 @@ void *consumer(void *arg)
 		    /* Write to Output File */
 		    fprintf(outputfp, "%s,%s\n", clone, firstipstr);
 		    printf("lookup %s : %s\n",clone, firstipstr);
+
+		    //add hostname to list of resolved hostnames
 		    strcpy(resolved[numberResolved], clone);
 		    numberResolved++;
 
@@ -189,42 +175,11 @@ void *consumer(void *arg)
 	pthread_exit(arg);
 }
 
-// void consume(FILE* outputfp, char hostname[]){
-// 	//we can redef later.
-// 	char firstipstr[INET6_ADDRSTRLEN];
-
-// 	if(dnslookup(hostname, firstipstr, sizeof(firstipstr))== UTIL_FAILURE){
-// 		fprintf(stderr, "dnslookup error: %s\n", hostname);
-// 		strncpy(firstipstr, "", sizeof(firstipstr));
-//     }
-	
-// 	else{
-// 		copy = hostname;
-// 		printf("Hostname in consume: %s\n", copy );	
-// 		printf("hostname: %s,firstipstr: %s\n", copy, firstipstr);
-//     	/* Write to Output File */
-//     	fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-// 	}
-// }
-
-// /*This is the method that actually does work and is called by producer thread*/
-// void produce(char[] hostname)
-// {
-// 		if(queue_push(&q, hostname) == QUEUE_FAILURE){
-// 			sprintf(errorstr,"Couldn't push onto queue");
-// 		}
-// 		else {
-// 			count++;
-// 		}
-// }
-
-
 int main(int argc, char* argv[]){
 
 	
 	FILE* outputfp = NULL;
 	int numCPU = cores();
-	printf("We are running with: %d cores\n", numCPU);
 	
 	//Declares an array of the two parameter structs
 	producer_args arg_p[MAXARGS];
@@ -254,23 +209,23 @@ int main(int argc, char* argv[]){
     for(i=1; i <= inputEnd; i++){
     	FILE* inputfp = NULL;
    		inputfp = fopen(argv[i], "r");
+   		if(!inputfp){
+		    sprintf(errorstr, "Error Opening Input File");
+		    perror(errorstr);
+		    return EXIT_FAILURE;
+		}
 		FILE* outfp = fopen(argv[argc-1], "r");
 		//paramters
 		arg_p[i].q = &q;
         arg_p[i].file = inputfp;
         arg_p[i].out = outfp;
 		
-		if(!inputfp){
-		    sprintf(errorstr, "Error Opening Input File");
-		    perror(errorstr);
-		}
 		pthread_create(&producers[i], NULL, producer, &arg_p[i]);
 	    
 	    //count 1+number of spawned requestors
 	    producer_threads++;
     }
-
-	//printf("Queue IS empty: %d\n",queue_is_empty(&q));
+    printf("We are running with: %d cores\n", numCPU);
 
     //Open Output File
     outputfp = fopen(argv[(argc-1)], "w");
@@ -301,8 +256,12 @@ int main(int argc, char* argv[]){
     	pthread_join(consumers[i], NULL);
     }
 
+    /*Clean Up*/
+    queue_cleanup(&q);
+
     /* Close Output File */
     fclose(outputfp);
+
 
     return EXIT_SUCCESS;
 }
