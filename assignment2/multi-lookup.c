@@ -23,7 +23,6 @@
 typedef struct producer_args_s{
     queue* q;
     FILE* file;
-    FILE* out;
 }producer_args;
 
 typedef struct consumer_args_s{
@@ -214,11 +213,9 @@ int main(int argc, char* argv[]){
 		    perror(errorstr);
 		    return EXIT_FAILURE;
 		}
-		FILE* outfp = fopen(argv[argc-1], "r");
 		//paramters
 		arg_p[i].q = &q;
         arg_p[i].file = inputfp;
-        arg_p[i].out = outfp;
 		
 		pthread_create(&producers[i], NULL, producer, &arg_p[i]);
 	    
