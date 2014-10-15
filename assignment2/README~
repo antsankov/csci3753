@@ -39,7 +39,7 @@ Extra Creadit:
 Producer threads ensure that their requests have been resolved. This was done by keeping an array of every hostname that has, for a fact,
 been resolved by the consumer. We also had an array for each producer that included all hostnames that were requested by said producer. We set up a while loop such that every 250 ms, the producer thread would check to see if one of the names in its requested array had been resolved (put into the resolved array). The thread prints out the hostname that it knows it has been resolved. The thread will then exit once it has seen that all that its requests have been resolved. 
 
-Consumer threads take into account the number of cores availible and threads based on this. In our implementation, we make a system call: sysconf( _SC_NPROCESSORS_ONLN ) which returns the number of available cores. We then use this in our main function when we actually isntanttiate the indiviudal consumer threads. We create as many threads as there are avaialable/online cores. 
+Consumer threads take into account the number of cores availible.
 
 
 

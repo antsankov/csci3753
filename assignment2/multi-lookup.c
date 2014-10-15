@@ -23,6 +23,7 @@
 typedef struct producer_args_s{
     queue* q;
     FILE* file;
+    FILE* out;
 }producer_args;
 
 typedef struct consumer_args_s{
@@ -48,6 +49,7 @@ char resolved[100][SBUFSIZE];
 
 int numberResolved =0;
 
+//EXTRA CREDIT
 //returns the number of cores available on the cpu
 int cores()
 {
@@ -88,6 +90,7 @@ void *producer(void *arg) {
 	fclose(inputfp);	
 	//nothing left in the thread file. Time to exit.
 	
+	//EXTRA CREDIT
 	int stopper = numberOfElements;
 	while(1){
 		int x, j;
