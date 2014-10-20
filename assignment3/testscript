@@ -21,7 +21,6 @@ $MAKE
 
 echo Starting test runs...
 
-#he runs the pi calculator with the three different scheduling algorithms. 
 echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
 /usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
 
@@ -32,6 +31,5 @@ echo Calculating pi over $ITERATIONS iterations using SCHED_RR with 1 simultaneo
 /usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
 
 echo Copying $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput
-
 echo using SCHED_OTHER with 1 simultaneous process...
 /usr/bin/time -f "$TIMEFORMAT" ./rw $BYTESTOCOPY $BLOCKSIZE > /dev/null
