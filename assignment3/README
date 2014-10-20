@@ -49,3 +49,31 @@ testscript:
 
 rr_quantum:
  sudo ./rr_quantum
+
+
+ WHAT WE NEED TO GET FOR RAHAT: 
+
+ 1. Real time -> Finish - start time
+ 2. System Time -> Amount of time spent in the kernel 
+ 3. User time -> Time spent in user space 
+ 4. Waitime -> Amount of time spent waiting. 
+ 5. # of context switches 
+
+ to get this info, call GNU time in /usr/bin/time -v NOTE: this is different than $time in shell because we get more info. 
+
+ Example:sudo /usr/bin/time -v ./pi 1000 {SCHED_RR, SCHED_FIFO, SCHED_OTHER}
+
+ Notes: TO get wait time = Realtime - (System time + user time)
+ 		SCHED_OTHER is CFS by default. 
+
+
+ C code for the scheduler:
+
+ #include <sched.h> 
+ //contains all of the metainfo for a program 
+ sched_param param; 
+ //this actually sets the priority 
+ param.priority(sched_getpriority_max(policy));
+ //this sets the scheduler on the pid 0 with the parameter for the scheduler pased in. 
+ sched_setschduler(0,SCHED_RR,&param);
+
