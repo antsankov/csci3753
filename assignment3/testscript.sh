@@ -19,19 +19,48 @@ echo Building code...
 $MAKE clean
 $MAKE
 
-echo Starting test runs...
+echo pi SMALL SCHED_OTHER
+for i in 'seq 1 50'	
+do 
+	/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+done
+
+echo  pi SMALL FIFO 
+for i in 'seq 1 50'	
+do 
+	/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null
+done
+
+echo pi SMALL SCHED_RR
+for i in 'seq 1 50'	
+do 
+	/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
+done
+
+
+# echo Calculating pi MEDIUM $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
+# for i in 'seq 1 30'	
+# do 
+# 	/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+# done
+
+# echo Calculating pi LARGE $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
+# for i in 'seq 1 100'	
+# do 
+# 	/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+# done
 
 #he runs the pi calculator with the three different scheduling algorithms. 
-echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+# echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
 
-echo Calculating pi over $ITERATIONS iterations using SCHED_FIFO with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null
+# echo Calculating pi over $ITERATIONS iterations using SCHED_FIFO with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null
 
-echo Calculating pi over $ITERATIONS iterations using SCHED_RR with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
+# echo Calculating pi over $ITERATIONS iterations using SCHED_RR with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
 
-echo Copying $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput
+# echo Copying $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput
 
-echo using SCHED_OTHER with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" ./rw $BYTESTOCOPY $BLOCKSIZE > /dev/null
+# echo using SCHED_OTHER with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" ./rw $BYTESTOCOPY $BLOCKSIZE > /dev/null
