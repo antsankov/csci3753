@@ -9,6 +9,9 @@
  *      calculating pi.
  */
 
+
+
+//DO WE NEED TO FORK or do we just spawn the program in a for loop in bash? 
 /* Local Includes */
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,73 +35,61 @@ inline double zeroDist(double x, double y){
 
 int main(int argc, char* argv[]){
 
-   char *envp[] =
-    {
-        "HOME=/",
-        "PATH=/bin:/usr/bin",
-        "TZ=UTC0",
-        "USER=user",
-        "LOGNAME=tarzan",
-        0
-    };
-
-
-    // int forks;
-    // for (forks = 0; forks < 5; forks++){
+    int i;
+    for (i=0;i< 3;i++){
         pid = fork();
-
-    //     if (pid == 0){
-    //         break;
-    //     }
-    // }
-
-
-    //this is the child 
-    if (pid == 0 ){
-        printf("\n%s\n","I am a child" );
-        long i;
-        long iterations;
-        double x, y;
-        double inCircle = 0.0;
-        double inSquare = 0.0;
-        double pCircle = 0.0;
-        double piCalc = 0.0;
-
-        /* Process program arguments to select iterations */
-        /* Set default iterations if not supplied */
-        if(argc < 2){
-    	iterations = DEFAULT_ITERATIONS;
-        }
-        /* Set iterations if supplied */
-        else{
-    	iterations = atol(argv[1]);
-    	if(iterations < 1){
-    	    fprintf(stderr, "Bad iterations value\n");
-    	    exit(EXIT_FAILURE);
-    	}
+        
+        if (pid == -1){
+            printf("%s\n","Failure" );
+            exit(1);
         }
 
-        /* Calculate pi using statistical methode across all iterations*/
-        for(i=0; i<iterations; i++){
-    	x = (random() % (RADIUS * 2)) - RADIUS;
-    	y = (random() % (RADIUS * 2)) - RADIUS;
-    	if(zeroDist(x,y) < RADIUS){
-    	    inCircle++;
-    	}
-    	inSquare++;
+        else if(pid == 0){
+            //////////////WORK////////////
+            printf("\n%s\n","I am a child" );
+            long i;
+            long iterations;
+            double x, y;
+            double inCircle = 0.0;
+            double inSquare = 0.0;
+            double pCircle = 0.0;
+            double piCalc = 0.0;
+
+            /* Process program arguments to select iterations */
+            /* Set default iterations if not supplied */
+            if(argc < 2){
+            iterations = DEFAULT_ITERATIONS;
+            }
+            /* Set iterations if supplied */
+            else{
+            iterations = atol(argv[1]);
+                if(iterations < 1){
+                    fprintf(stderr, "Bad iterations value\n");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            /* Calculate pi using statistical methode across all iterations*/
+            for(i=0; i<iterations; i++){
+            x = (random() % (RADIUS * 2)) - RADIUS;
+            y = (random() % (RADIUS * 2)) - RADIUS;
+            if(zeroDist(x,y) < RADIUS){
+                inCircle++;
+            }
+            inSquare++;
+            }
+
+            /* Finish calculation */
+            pCircle = inCircle/inSquare;
+            piCalc = pCircle * 4.0;
+
+            /* Print result */
+            fprintf(stdout, "pi = %f\n", piCalc);
+            printf("%s\n","DONE" );
+            /////////////END WORK///////////////
         }
-
-        /* Finish calculation */
-        pCircle = inCircle/inSquare;
-        piCalc = pCircle * 4.0;
-
-        /* Print result */
-        fprintf(stdout, "pi = %f\n", piCalc);
-        execve(argv[0], argv, envp);    }
-    //parent stuff
-    else {
-        int status;
-        printf("%s\n","IN THE PARENT!" );
-        return EXIT_FAILURE;
+        wait(0);
     }
+    printf("exiting...\n");
+    return 0;
 }
