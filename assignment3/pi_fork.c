@@ -18,6 +18,7 @@
 #include <math.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/wait.h>
 
 
 /* Local Defines */
@@ -38,12 +39,16 @@ int main(int argc, char* argv[]){
     int forks = atoi(c);
     int number, pid;
     pthread_mutex_t var = PTHREAD_MUTEX_INITIALIZER;
-
+    int pids[forks];
     for (number=1;number<= forks;number++){
         pid = fork();
         if (pid == 0){
             printf("BREAKING OUT %d\n",number );
             break;
+        }
+        else
+        {
+            pids[number-1] = pid;
         }
 
     }
@@ -91,6 +96,21 @@ int main(int argc, char* argv[]){
         /////////////END WORK//////////////
         fflush(stdout);
     }
-sleep(1);
+    else
+    {
+        int status;
+        int i = 0;
+        for(i = 0; i < forks ; i++)
+        {
+            pid = pids[i];
+            do{
+                pid = waitpid(pid, &status, WNOHANG);
+                if (WIFEXITED(status))
+                {
+                    //printf("child exited with status of %d\n", WEXITSTATUS(status));
+                }
+            } while(pid == 0);
+        }
+    }
 }
 
