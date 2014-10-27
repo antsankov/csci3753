@@ -20,22 +20,43 @@ $MAKE clean
 $MAKE
 
 echo pi SMALL SCHED_OTHER
-for i in 'seq 1 50'	
+FAIL=0
+for i in {1..5};
 do 
-	/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+	/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null &
 done
 
-echo  pi SMALL FIFO 
-for i in 'seq 1 50'	
-do 
-	/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null
+for job in `jobs -p`
+do
+    wait $job || let "FAIL+=1"
 done
+
+
+echo  pi SMALL FIFO
+FAIL=0
+for i in {1..5};
+do 
+	/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null &
+done
+
+for job in `jobs -p`
+do
+    wait $job || let "FAIL+=1"
+done
+
 
 echo pi SMALL SCHED_RR
-for i in 'seq 1 50'	
+FAIL=0
+for i in {1..5};
 do 
 	/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
 done
+
+for job in `jobs -p`
+do
+    wait $job || let "FAIL+=1"
+done
+
 
 
 # echo Calculating pi MEDIUM $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
