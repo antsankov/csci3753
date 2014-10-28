@@ -71,6 +71,7 @@ clean: testclean
 	rm -f handout/*~
 	rm -f handout/*.log
 	rm -f handout/*.aux
+	rm -f rwoutput*
 
 testclean:
 	rm -f rwoutput*

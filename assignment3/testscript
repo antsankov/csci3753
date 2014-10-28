@@ -12,7 +12,7 @@
 ITERATIONS=1000000
 BYTESTOCOPY=102400
 BLOCKSIZE=1024
-TIMEFORMAT="wall=%e user=%U system=%S CPU=%P i-switched=%c v-switched=%w"
+TIMEFORMAT="wall=%e, user=%U, system=%S, CPU=%P, i-switched=%c, v-switched=%w"
 MAKE="make -s"
 
 echo Building code...
@@ -38,7 +38,7 @@ do
 		COUNT=64
 		;;
 	*) #high
-		COUNT=256
+		COUNT=128
 		;;
 	esac
 	#loop through SCHEDuler type
@@ -56,22 +56,25 @@ do
 			;;
 		esac
 		#loop through process type
-		for k in ${ARR[*]};
-		do
-			echo Calculating pi over $ITERATIONS iterations using $SCHED and $COUNT forks with $k
-			if [ $k=cpu ]; then #cpu bound
-               /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null
-            elif [ $k=io ]; then
-				/usr/bin/time -f "$TIMEFORMAT" ./pi_rw $ITERATIONS $SCHED $COUNT > /dev/null
-            else 
-            	/usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null  
-            fi
-            #echo ---
-		done
-		#echo ---
+
+		#cpu bound
+		echo CALCULATING pi over $ITERATIONS iterations using $SCHED and $COUNT forks
+        /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null
+        echo
+
+        #io bound
+        echo COPYING $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput using $SCHED and $COUNT forks
+        /usr/bin/time -f "$TIMEFORMAT" ./rw_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $SCHED $COUNT > /dev/null
+        echo
+
+        #mix of both
+        echo MIXING a copy using $SCHED and $COUNT forks
+        /usr/bin/time -f "$TIMEFORMAT" ./mix_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $ITERATIONS $SCHED $COUNT > /dev/null
+        echo
 	done
-	#echo ---
 done
+
+rm -rf rwoutput-*
 
 
 

@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <unistd.h>
+#include <sched.h>
 
 /* Local Defines */
 #define DEFAULT_ITERATIONS 1000000
