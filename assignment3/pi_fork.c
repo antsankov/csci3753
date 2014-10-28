@@ -19,7 +19,8 @@
 #include <errno.h>
 #include <pthread.h>
 #include <sys/wait.h>
-
+#include <string.h>
+#include <unistd.h>
 
 /* Local Defines */
 #define DEFAULT_ITERATIONS 1000000
@@ -38,7 +39,6 @@ int main(int argc, char* argv[]){
     char *c = argv[argc - 1];
     int forks = atoi(c);
     int number, pid;
-    pthread_mutex_t var = PTHREAD_MUTEX_INITIALIZER;
     int pids[forks];
     for (number=1;number<= forks;number++){
         pid = fork();
@@ -146,5 +146,6 @@ int main(int argc, char* argv[]){
             } while(pid == 0);
         }
     }
+    return 0;
 }
 
