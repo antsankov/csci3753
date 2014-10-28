@@ -29,6 +29,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <unistd.h>
 
 ///////////////RW STUFF////////////
 #define MAXFILENAMELENGTH 80
@@ -352,5 +354,6 @@ int main(int argc, char* argv[]){
             } while(pid == 0);
         }
     }
+    return 0;
 }
 

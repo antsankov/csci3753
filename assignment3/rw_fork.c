@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 /* Local Defines */
 #define MAXFILENAMELENGTH 80
@@ -251,4 +252,6 @@ int main(int argc, char* argv[]){
             } while(pid == 0);
         }
     }
+
+    return 0;
 }

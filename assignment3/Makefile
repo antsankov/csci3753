@@ -12,10 +12,27 @@ INPUTBLOCKS = $(shell echo $(INPUTFILESIZEBYTES)\/$(INPUTBLOCKSIZEBYTES) | bc)
 
 .PHONY: all clean
 
-all: pi pi-sched pi_fork rw rr_quantum mix_fork rw_fork
+all: pi pi-sched rw  mix_fork rw_fork pi_fork 
+#rr_quantum
 
+pi.o: pi.c
+	$(CC) $(CFLAGS) $<
 
-#OUR STUFF
+mix_fork.o: mix_fork.c
+	$(CC) $(CFLAGS) $<
+
+pi_fork.o: pi_fork.c
+	$(CC) $(CFLAGS) $<
+
+rw_fork.o: rw_fork.c
+	$(CC) $(CFLAGS) $<
+
+pi-sched.o: pi-sched.c
+	$(CC) $(CFLAGS) $<
+
+rw.o: rw.c
+	$(CC) $(CFLAGS) $<
+
 mix_fork: mix_fork.o
 	$(CC) $(LFLAGS) $^ -o $@ -lm
 
@@ -25,7 +42,6 @@ pi_fork: pi_fork.o
 rw_fork: rw_fork.o rwinput
 	$(CC) $(LFLAGS) rw.o -o $@ -lm
 
-#END OUR STUFF
 pi: pi.o
 	$(CC) $(LFLAGS) $^ -o $@ -lm
 
@@ -35,28 +51,10 @@ pi-sched: pi-sched.o
 rw: rw.o rwinput
 	$(CC) $(LFLAGS) rw.o -o $@ -lm
 
+
+#This is broken for now. 
 rr_quantum: rr_quantum.o
 	$(CC) $(LFLAGS) $^ -o $@ -lm
-
-pi.o: pi.c
-	$(CC) $(CFLAGS) $<
-
-#OUR STUFF
-mix_fork.o: mix_fork.c
-	$(CC) $(CFLAGS) $<
-
-pi_fork.o: pi_fork.c
-	$(CC) $(CFLAGS) $<
-
-rw_fork.o: rw_fork.c
-	$(CC) $(CFLAGS) $<
-#END OUR STUFF
-
-pi-sched.o: pi-sched.c
-	$(CC) $(CFLAGS) $<
-
-rw.o: rw.c
-	$(CC) $(CFLAGS) $<
 
 #This is necessary for the rw test, we don't need to change it at all. 
 rwinput: Makefile
