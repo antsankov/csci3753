@@ -1,5 +1,4 @@
-#/!/bin/bash
-
+#!/bin/bash
 #File: testscript
 #Author: Andy Sayler
 #Project: CSCI 3753 Programming Assignment 3
@@ -9,7 +8,8 @@
 #	A simple bash script to run a signle copy of each test case
 #	and gather the relevent data.
 
-ITERATIONS=100000000
+#ITERATIONS=100000000
+ITERATIONS=1000000
 BYTESTOCOPY=102400
 BLOCKSIZE=1024
 TIMEFORMAT="wall=%e user=%U system=%S CPU=%P i-switched=%c v-switched=%w"
@@ -19,17 +19,91 @@ echo Building code...
 $MAKE clean
 $MAKE
 
-echo Starting test runs...
+COUNT=0
+SCHED=SCHED_RR
 
-echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" ./pi-sched $ITERATIONS SCHED_OTHER > /dev/null
+ARR=(cpu io mix)
 
-echo Calculating pi over $ITERATIONS iterations using SCHED_FIFO with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_FIFO > /dev/null
+#loop through fork COUNT
+for i in `seq 1 4`;
+do
+	case $i in
+	1) #single
+		COUNT=1
+		;;
+	2) #low
+		COUNT=8
+		;;
+	3) #medium
+		COUNT=64
+		;;
+	*) #high
+		COUNT=256
+		;;
+	esac
+	#loop through SCHEDuler type
+	for j in `seq 1 3`;
+	do
+		case $j in
+		1) #other
+			SCHED=SCHED_OTHER
+			;;
+		2) #fifo
+			SCHED=SCHED_FIFO
+			;;
+		*) #round robin
+			SCHED=SCHED_RR
+			;;
+		esac
+		#loop through process type
+		for k in ${ARR[*]};
+		do
+			echo Calculating pi over $ITERATIONS iterations using $SCHED and $COUNT forks with $k
+			if [ $k=cpu ]; then #cpu bound
+               /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null
+            elif [ $k=io ]; then
+				/usr/bin/time -f "$TIMEFORMAT" ./pi_rw $ITERATIONS $SCHED $COUNT > /dev/null
+            else 
+            	/usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null  
+            fi
+            #echo ---
+		done
+		#echo ---
+	done
+	#echo ---
+done
 
-echo Calculating pi over $ITERATIONS iterations using SCHED_RR with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" sudo ./pi-sched $ITERATIONS SCHED_RR > /dev/null
 
-echo Copying $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput
-echo using SCHED_OTHER with 1 simultaneous process...
-/usr/bin/time -f "$TIMEFORMAT" ./rw $BYTESTOCOPY $BLOCKSIZE > /dev/null
+
+
+# echo Starting test runs...
+
+# echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER SINGLE
+# echo ------------------------\n
+# /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS SCHED_OTHER 1 > /dev/null
+# echo ------------------------\n
+
+# echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER SMALL
+# echo ------------------------\n
+# /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS SCHED_OTHER 5 > /dev/null
+# echo ------------------------\n
+
+# echo ------------------------\n
+# echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER MEDIUM
+# /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS SCHED_OTHER 50 > /dev/null
+# echo ------------------------\n
+
+# echo ------------------------\n
+# echo Calculating pi over $ITERATIONS iterations using SCHED_OTHER LARGE
+# /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS SCHED_OTHER 100 > /dev/null
+# echo ------------------------\n
+
+# echo Calculating pi over $ITERATIONS iterations using SCHED_FIFO with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" sudo ./pi-SCHED $ITERATIONS SCHED_FIFO > /dev/null
+
+# echo Calculating pi over $ITERATIONS iterations using SCHED_RR with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" sudo ./pi-SCHED $ITERATIONS SCHED_RR > /dev/null
+
+# echo Copying $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput
+# echo using SCHED_OTHER with 1 simultaneous process...
+# /usr/bin/time -f "$TIMEFORMAT" ./rw $BYTESTOCOPY $BLOCKSIZE > /dev/null
