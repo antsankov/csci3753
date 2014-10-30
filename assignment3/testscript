@@ -8,11 +8,12 @@
 #	A simple bash script to run a signle copy of each test case
 #	and gather the relevent data.
 
-#ITERATIONS=100000000
-ITERATIONS=1000000
+ITERATIONS=100000000
+#ITERATIONS=1000000
 BYTESTOCOPY=102400
 BLOCKSIZE=1024
-TIMEFORMAT="wall=%e, user=%U, system=%S, CPU=%P, i-switched=%c, v-switched=%w"
+#TIMEFORMAT="wall=%e,user=%U,system=%S,CPU=%P,i-switched=%c,v-switched=%w"
+TIMEFORMAT="%e,%U,%S,%P,%c,%w"
 MAKE="make -s"
 
 echo Building code...
@@ -58,19 +59,16 @@ do
 		#loop through process type
 
 		#cpu bound
-		echo CALCULATING pi over $ITERATIONS iterations using $SCHED and $COUNT forks
+		echo CPU, $SCHED, $COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null
-        echo
 
         #io bound
-        echo COPYING $BYTESTOCOPY bytes in blocks of $BLOCKSIZE from rwinput to rwoutput using $SCHED and $COUNT forks
+        echo IO, $SCHED, $COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./rw_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $SCHED $COUNT > /dev/null
-        echo
 
         #mix of both
-        echo MIXING a copy using $SCHED and $COUNT forks
+        echo MIX, $SCHED, $COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./mix_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $ITERATIONS $SCHED $COUNT > /dev/null
-        echo
 	done
 done
 

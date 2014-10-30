@@ -1,0 +1,40 @@
+1024+0 records in
+1024+0 records out
+1048576 bytes (1.0 MB) copied, 0.0959076 s, 10.9 MB/s
+wall=0.07, user=0.08, system=0.05, CPU=198%, i-switched=22, v-switched=1
+wall=3.89, user=0.00, system=0.01, CPU=0%, i-switched=5, v-switched=201
+wall=3.72, user=0.45, system=3.34, CPU=102%, i-switched=326, v-switched=201
+wall=0.07, user=0.08, system=0.06, CPU=200%, i-switched=8, v-switched=2
+wall=3.57, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=3.74, user=0.57, system=3.24, CPU=102%, i-switched=317, v-switched=201
+wall=0.07, user=0.07, system=0.06, CPU=200%, i-switched=7, v-switched=2
+wall=3.77, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=3.55, user=0.45, system=3.17, CPU=102%, i-switched=301, v-switched=201
+wall=0.29, user=0.71, system=0.25, CPU=334%, i-switched=166, v-switched=5
+wall=3.75, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=10.18, user=1.52, system=9.32, CPU=106%, i-switched=1022, v-switched=2317
+wall=0.26, user=0.69, system=0.14, CPU=321%, i-switched=16, v-switched=6
+wall=3.76, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=9.55, user=1.31, system=8.79, CPU=105%, i-switched=807, v-switched=1497
+wall=0.29, user=0.70, system=0.15, CPU=295%, i-switched=18, v-switched=7
+wall=3.77, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=9.73, user=1.61, system=8.69, CPU=105%, i-switched=895, v-switched=1805
+wall=1.64, user=4.29, system=0.08, CPU=266%, i-switched=864, v-switched=36
+wall=3.60, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=17.45, user=5.14, system=15.76, CPU=119%, i-switched=2524, v-switched=15163
+wall=1.55, user=5.49, system=0.01, CPU=355%, i-switched=11, v-switched=49
+wall=3.97, user=0.00, system=0.01, CPU=0%, i-switched=4, v-switched=201
+wall=14.99, user=5.98, system=13.16, CPU=127%, i-switched=3023, v-switched=15958
+wall=1.73, user=5.42, system=0.14, CPU=320%, i-switched=47, v-switched=48
+wall=3.63, user=0.00, system=0.01, CPU=0%, i-switched=1, v-switched=201
+wall=13.40, user=4.72, system=13.25, CPU=134%, i-switched=1423, v-switched=12675
+wall=3.82, user=9.53, system=0.17, CPU=254%, i-switched=2062, v-switched=83
+wall=3.60, user=0.00, system=0.01, CPU=0%, i-switched=2, v-switched=201
+wall=20.52, user=9.44, system=17.54, CPU=131%, i-switched=4192, v-switched=27120
+wall=3.82, user=10.99, system=0.01, CPU=288%, i-switched=51, v-switched=96
+wall=3.66, user=0.00, system=0.01, CPU=0%, i-switched=2, v-switched=201
+wall=20.02, user=10.35, system=16.59, CPU=134%, i-switched=3710, v-switched=28416
+wall=3.82, user=10.67, system=0.02, CPU=279%, i-switched=200, v-switched=94
+wall=3.67, user=0.00, system=0.01, CPU=0%, i-switched=3, v-switched=201
+wall=19.03, user=12.95, system=15.59, CPU=150%, i-switched=4131, v-switched=35593
+
