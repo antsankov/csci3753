@@ -59,15 +59,15 @@ do
 		#loop through process type
 
 		#cpu bound
-		echo CPU, $SCHED, $COUNT
+		echo CPU,$SCHED,$COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./pi_fork $ITERATIONS $SCHED $COUNT > /dev/null
 
         #io bound
-        echo IO, $SCHED, $COUNT
+        echo IO,$SCHED,$COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./rw_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $SCHED $COUNT > /dev/null
 
         #mix of both
-        echo MIX, $SCHED, $COUNT
+        echo MIX,$SCHED,$COUNT
         /usr/bin/time -f "$TIMEFORMAT" ./mix_fork $BYTESTOCOPY $BLOCKSIZE rwinput rwoutput $ITERATIONS $SCHED $COUNT > /dev/null
 	done
 done
