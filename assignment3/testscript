@@ -73,6 +73,7 @@ do
 done
 
 rm -rf rwoutput-*
+rm -rf rwinput*
 
 
 
