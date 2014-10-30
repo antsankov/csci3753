@@ -12,6 +12,15 @@ ITERATIONS=100000000
 #ITERATIONS=1000000
 BYTESTOCOPY=102400
 BLOCKSIZE=1024
+# e: elapsed real time in seconds
+# u: Total number of CPU-seconds that the process spent in user mode.
+# S: seconds spent in kernel mode,
+# P: Percentage of the CPU that this job got, computed as (%U + %S) /E, 
+# c: number of times the program context sitched voluntarily, 
+# w: Number of waits: times that the program was context-switched voluntarily.
+
+#waitTime: Realtime - (System time + user time) -> e - (u+s)
+
 #TIMEFORMAT="wall=%e,user=%U,system=%S,CPU=%P,i-switched=%c,v-switched=%w"
 TIMEFORMAT="%e,%U,%S,%P,%c,%w"
 MAKE="make -s"
