@@ -77,3 +77,8 @@ rr_quantum:
  //this sets the scheduler on the pid 0 with the parameter for the scheduler pased in. 
  sched_setschduler(0,SCHED_RR,&param);
 
+
+Speed notes: 
+
+1048576 bytes (1.0 MB) copied, 0.0649386 s, 16.1 MB/s
+
