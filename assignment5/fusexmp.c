@@ -130,11 +130,14 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
-
 	res = mkdir(path, mode);
+	
+	//this checks if it can make a directory 
 	if (res == -1)
 		return -errno;
-
+	
+	//do any function calls here
+	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
 }
 
