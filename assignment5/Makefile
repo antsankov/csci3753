@@ -41,6 +41,9 @@ xattr-util: xattr-util.o
 aes-crypt-util: aes-crypt-util.o aes-crypt.o
 	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSOPENSSL)
 
+encrypt-fs: encrypt-fs.o
+	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSFUSE)
+
 fusehello.o: fusehello.c
 	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
 
@@ -56,7 +59,13 @@ aes-crypt-util.o: aes-crypt-util.c aes-crypt.h
 aes-crypt.o: aes-crypt.c aes-crypt.h
 	$(CC) $(CFLAGS) $<
 
+#The new stuff! 
+encrypt-fs.o: encrypt-fs.c
+	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
+
 clean:
+	rm -f encrypt-fs.o
+	rm -f encrypt-fs
 	rm -f $(FUSE_EXAMPLES)
 	rm -f $(XATTR_EXAMPLES)
 	rm -f $(OPENSSL_EXAMPLES)
