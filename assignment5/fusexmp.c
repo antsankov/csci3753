@@ -268,7 +268,10 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
 		return -errno;
-
+	//check flag
+	//		if the flag is not set / set to unencrypted, default read
+	//		otherwise
+	//pipe the buffer through the decryptor
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
@@ -277,6 +280,8 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	return res;
 }
 
+
+//writes to a file
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
@@ -287,7 +292,9 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		return -errno;
-
+	//set encrypted flag
+	//get the cipher text passing in the buf
+	//write the ciphertext to the file
 	res = pwrite(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
