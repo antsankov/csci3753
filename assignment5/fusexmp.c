@@ -30,6 +30,8 @@
 #define ENCRYPT 1
 #define DECRYPT 0
 #define PASS -1
+//some numbers
+#define PATH_MAX 255
 
 
 #ifdef HAVE_CONFIG_H
@@ -54,6 +56,7 @@
 #endif
 
 
+
 struct xmp_info
 {
 	//our mountpoint
@@ -64,6 +67,19 @@ struct xmp_info
 	char *password;
 };
 
+#define XMP_DATA ((struct xmp_info *) fuse_get_context()->private_data)
+
+static int fixPath(char fixedpath[PATH_MAX], const char *path)
+{
+	char *mir = XMP_DATA->mirror;
+	printf("mirror directory = %s\n", mir);
+	//copy the mirrored directory into our mirrored path
+	strcpy(fixedpath, mir);
+	//concatenate our path
+	strcat(fixedpath, path);
+	printf("returning fixed directory = %s\n", fixedpath);
+	return 0;
+}
 
 
 /* gets the characteristics of a file from lstat and stores them.*/
@@ -151,7 +167,9 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
-	res = mkdir(path, mode);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+	res = mkdir(fpath, mode);
 	
 	//this checks if it can make a directory 
 	if (res == -1)
@@ -159,7 +177,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	
 	//do any function calls here
 	printf("PAATH IS %s\n",path );
-	printf("REAL PATH IS %s\n",realpath(path,NULL));
+	printf("FIX PATH IS %s\n",realpath(path,NULL));
 
 	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
@@ -445,6 +463,7 @@ static struct fuse_operations xmp_oper = {
 //Tutorial by Joseph J Pfeiffer at
 //cs.nmsu.edu/~pfeiffer/fuse-tutorial
 //USAGE: ./pa5-encfs <Key Phrase> <Mirror Directory> <Mount Point>
+//sudo ./fusexmp password mirror mnt
 int main(int argc, char *argv[])
 {
 	umask(0);
