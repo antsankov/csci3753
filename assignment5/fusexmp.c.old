@@ -25,13 +25,6 @@
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
 
-
-//encryption constants
-#define ENCRYPT 1
-#define DECRYPT 0
-#define PASS -1
-
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -53,17 +46,6 @@
 #include <sys/xattr.h>
 #endif
 
-struct xmp_info
-{
-	//mirrored directory path
-	char *mirror;
-	//password for encryption/decryption
-	char *password;
-};
-
-
-
-/* gets the characteristics of a file from lstat and stores them.*/
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -433,39 +415,11 @@ static struct fuse_operations xmp_oper = {
 	.getxattr	= xmp_getxattr,
 	.listxattr	= xmp_listxattr,
 	.removexattr	= xmp_removexattr,
-#endifmirrored
+#endif
 };
 
-//Tutorial by Joseph J Pfeiffer at
-//cs.nmsu.edu/~pfeiffer/fuse-tutorial
-//USAGE: ./pa5-encfs <Key Phrase> <Mirror Directory> <Mount Point>
 int main(int argc, char *argv[])
 {
 	umask(0);
-	//Make sure the proper number of arguments are passed in
-	if(argc < 4){
-		printf("%s\n", "ERROR: NOT ENOUGH ARGUMENTS." );
-		exit(EXIT_FAILURE)
-	}
-
-	//initialize a struct to hold mirrored directory and password
-	struct xmp_info *xmp_data;
-	xmp_data = malloc(sizeof(struct xmp_info));
-	//TODO catch for any errors calling malloc
-
-	//stores the path to the mirroed directory
-	xmp_data->mirror = realpath(argv[2], NULL);
-	//Stores the password
-	xmp_data->password = argv[1];
-
-	printf("password = %s\n", xmp_data->password);
-	printf("mirrored directory = %s\n", xmp_data->mirror);
-
-
-	//fuse will now execute normally. It will get it's normal paramters passed in the correct order.
-	argv[1] = argv[3]; // store the mountpoint as the first argument
-	argv[2] = argv[4]; // moving the option flag to the second argument
-	argc -= 2; //reduces the total number of passed aruments in.
-	//call the fuse_main, passing in our data as well.
-	return fuse_main(argc, argv, &xmp_oper, xmp_data);
+	return fuse_main(argc, argv, &xmp_oper, NULL);
 }
