@@ -58,7 +58,7 @@
 
 #endif
 
-
+//./encrypt-fs password mirror/ mnt/ -d
 
 struct xmp_info
 {
@@ -89,7 +89,10 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
-	res = lstat(path, stbuf);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = lstat(fpath, stbuf);
 	if (res == -1)
 		return -errno;
 
@@ -100,7 +103,10 @@ static int xmp_access(const char *path, int mask)
 {
 	int res;
 
-	res = access(path, mask);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = access(fpath, mask);
 	if (res == -1)
 		return -errno;
 
@@ -111,7 +117,10 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
 
-	res = readlink(path, buf, size - 1);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = readlink(fpath, buf, size - 1);
 	if (res == -1)
 		return -errno;
 
@@ -129,7 +138,10 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
-	dp = opendir(path);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	dp = opendir(fpath);
 	if (dp == NULL)
 		return -errno;
 
@@ -150,6 +162,9 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
 
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
 	   is more portable */
 	if (S_ISREG(mode)) {
@@ -157,9 +172,9 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 		if (res >= 0)
 			res = close(res);
 	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
+		res = mkfifo(fpath, mode);
 	else
-		res = mknod(path, mode, rdev);
+		res = mknod(fpath, mode, rdev);
 	if (res == -1)
 		return -errno;
 
@@ -179,7 +194,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	
 	//do any function calls here
 	printf("PAATH IS %s\n",path );
-	
+
 	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
 }
@@ -188,7 +203,10 @@ static int xmp_unlink(const char *path)
 {
 	int res;
 
-	res = unlink(path);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = unlink(fpath);
 	if (res == -1)
 		return -errno;
 
@@ -199,7 +217,10 @@ static int xmp_rmdir(const char *path)
 {
 	int res;
 
-	res = rmdir(path);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = rmdir(fpath);
 	if (res == -1)
 		return -errno;
 
@@ -243,7 +264,10 @@ static int xmp_chmod(const char *path, mode_t mode)
 {
 	int res;
 
-	res = chmod(path, mode);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = chmod(fpath, mode);
 	if (res == -1)
 		return -errno;
 
@@ -254,7 +278,10 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int res;
 
-	res = lchown(path, uid, gid);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = lchown(fpath, uid, gid);
 	if (res == -1)
 		return -errno;
 
@@ -265,7 +292,10 @@ static int xmp_truncate(const char *path, off_t size)
 {
 	int res;
 
-	res = truncate(path, size);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = truncate(fpath, size);
 	if (res == -1)
 		return -errno;
 
@@ -277,12 +307,15 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 	int res;
 	struct timeval tv[2];
 
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
 	tv[0].tv_sec = ts[0].tv_sec;
 	tv[0].tv_usec = ts[0].tv_nsec / 1000;
 	tv[1].tv_sec = ts[1].tv_sec;
 	tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-	res = utimes(path, tv);
+	res = utimes(fpath, tv);
 	if (res == -1)
 		return -errno;
 
@@ -293,7 +326,10 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
 
-	res = open(path, fi->flags);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = open(fpath, fi->flags);
 	if (res == -1)
 		return -errno;
 
@@ -307,8 +343,11 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	int fd;
 	int res;
 
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
 	(void) fi;
-	fd = open(path, O_RDONLY);
+	fd = open(fpath, O_RDONLY);
 	if (fd == -1)
 		return -errno;
 	//check flag
@@ -331,8 +370,11 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	int fd;
 	int res;
 
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
 	(void) fi;
-	fd = open(path, O_WRONLY);
+	fd = open(fpath, O_WRONLY);
 	if (fd == -1)
 		return -errno;
 	//set encrypted flag
@@ -350,7 +392,10 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
 
-	res = statvfs(path, stbuf);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	res = statvfs(fpath, stbuf);
 	if (res == -1)
 		return -errno;
 
@@ -361,8 +406,11 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 
     (void) fi;
 
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
     int res;
-    res = creat(path, mode);
+    res = creat(fpath, mode);
     if(res == -1)
 	return -errno;
 
@@ -398,7 +446,10 @@ static int xmp_fsync(const char *path, int isdatasync,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
-	int res = lsetxattr(path, name, value, size, flags);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lsetxattr(fpath, name, value, size, flags);
 	if (res == -1)
 		return -errno;
 	return 0;
@@ -407,7 +458,10 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
-	int res = lgetxattr(path, name, value, size);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lgetxattr(fpath, name, value, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -415,7 +469,9 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-	int res = llistxattr(path, list, size);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+	int res = llistxattr(fpath, list, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -423,7 +479,10 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-	int res = lremovexattr(path, name);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lremovexattr(fpath, name);
 	if (res == -1)
 		return -errno;
 	return 0;
