@@ -21,7 +21,7 @@
         open() and close() calls and support fh dependent functions.
 
 */
-#define XMP_DATA ((struct xmp_info *) fuse_get_context()->private_data)
+
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
 
@@ -30,6 +30,8 @@
 #define ENCRYPT 1
 #define DECRYPT 0
 #define PASS -1
+//some numbers
+#define PATH_MAX 255
 
 
 #ifdef HAVE_CONFIG_H
@@ -53,7 +55,8 @@
 #include <sys/xattr.h>
 #endif
 
-// /home/user/csci3753/assignment5/mnt
+
+
 struct xmp_info
 {
 	//our mountpoint
@@ -64,14 +67,19 @@ struct xmp_info
 	char *password;
 };
 
-//Given a virtual path  pointer path and a pointer to the fixed path, 
-//appends the mirror to the path and saves it to the fixed path
-static int fix_path(const char *path, char *fixed)
+#define XMP_DATA ((struct xmp_info *) fuse_get_context()->private_data)
+
+static int fixPath(char fixedpath[PATH_MAX], const char *path)
 {
-	strcat(fixed,path);
-	//strcat(fixed, XMP_DATA->mirror);
+	char *mir = XMP_DATA->mirror;
+	printf("mirror directory = %s\n", mir);
+	//copy the mirrored directory into our mirrored path
+	strcpy(fixedpath, mir);
+	//concatenate our path
+	strcat(fixedpath, path);
 	return 0;
 }
+
 
 /* gets the characteristics of a file from lstat and stores them.*/
 static int xmp_getattr(const char *path, struct stat *stbuf)
@@ -84,8 +92,6 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 
 	return 0;
 }
-
-
 
 static int xmp_access(const char *path, int mask)
 {
@@ -160,8 +166,8 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
-	char *fpath="";
-	fix_path(path, fpath);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
 	res = mkdir(fpath, mode);
 	
 	//this checks if it can make a directory 
@@ -170,8 +176,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	
 	//do any function calls here
 	printf("PAATH IS %s\n",path );
-	printf("fPAATH IS %s\n",fpath );
-	//printf("REAL PATH IS %s\n",realpath(path,NULL));
+	printf("FIX PATH IS %s\n",realpath(path,NULL));
 
 	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
@@ -457,6 +462,7 @@ static struct fuse_operations xmp_oper = {
 //Tutorial by Joseph J Pfeiffer at
 //cs.nmsu.edu/~pfeiffer/fuse-tutorial
 //USAGE: ./pa5-encfs <Key Phrase> <Mirror Directory> <Mount Point>
+//sudo ./fusexmp password mirror mnt
 int main(int argc, char *argv[])
 {
 	umask(0);

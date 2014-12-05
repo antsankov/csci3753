@@ -23,7 +23,7 @@ OPENSSL_EXAMPLES = aes-crypt-util
 
 .PHONY: all fuse-examples xattr-examples openssl-examples clean
 
-all: fuse-examples xattr-examples openssl-examples
+all: fuse-examples xattr-examples openssl-examples encrypt-fs
 
 fuse-examples: $(FUSE_EXAMPLES)
 xattr-examples: $(XATTR_EXAMPLES)
@@ -59,7 +59,6 @@ aes-crypt-util.o: aes-crypt-util.c aes-crypt.h
 aes-crypt.o: aes-crypt.c aes-crypt.h
 	$(CC) $(CFLAGS) $<
 
-#The new stuff! 
 encrypt-fs.o: encrypt-fs.c
 	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
 
