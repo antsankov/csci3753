@@ -53,6 +53,9 @@
 #include <sys/time.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
+
+#include "aes-crypt.h"
+
 #endif
 
 
@@ -176,8 +179,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	
 	//do any function calls here
 	printf("PAATH IS %s\n",path );
-	printf("FIX PATH IS %s\n",realpath(path,NULL));
-
+	
 	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
 }
