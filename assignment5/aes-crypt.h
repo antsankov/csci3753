@@ -32,7 +32,7 @@
 /* int do_crypt(FILE* in, FILE* out, int action, char* key_str)
  * Purpose: Perform cipher on in File* and place result in out File*
  * Args: FILE* in      : Input File Pointer
- *       FILE* out     : Output File Pointer
+ *       FILE* out     : Output File Pointer`
  *       int action    : Cipher action (1=encrypt, 0=decrypt, -1=pass-through (copy))
  *	 char* key_str : C-string containing passpharse from which key is derived
  * Return: FAILURE on error, SUCCESS on success

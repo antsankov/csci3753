@@ -51,7 +51,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
-#include "aes-crypt.c"
+#include "aes-crypt.h"
 
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
@@ -76,7 +76,7 @@ struct xmp_info
 static int fixPath(char fixedpath[PATH_MAX], const char *path)
 {
 	char *mir = XMP_DATA->mirror;
-	printf("mirror directory = %s\n", mir);
+	//printf("mirror directory = %s\n", mir);
 	//copy the mirrored directory into our mirrored path
 	strcpy(fixedpath, mir);
 	//concatenate our path
@@ -374,7 +374,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	//if the file is encrypted
 	if(isenc(fpath)){
 		//fopen the file
-		fopen(fpath, "r");
+		fp = fopen(fpath, "r");
 		//create a new temp file
 		temp = tempfile(fpath);
 		//decrypt into the temp file
@@ -421,18 +421,30 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
 	(void) fi;
 
-	// if(isenc(path))
-	// {
-	// 	//fopen
-	// 	//create a temp file
-	// 	//decrypt into temp file
-	// 	//write into our temp file
-	// 	//fopen our file
-	// 	//encrypt
-	// 	//close our file pointers
-	// }
-	// else
-	// {
+	if(isenc(path))
+	{
+		fp = fopen(fpath, "w");
+		//temp = tempfile(fpath);
+		//write into temp file
+		char tpath[PATH_MAX];
+		strcpy(tpath, fpath);
+		strcat(tpath, ".tmp");
+
+		fd = open(tpath, O_WRONLY);
+		res = pwrite(fd, buf, size, offset);
+		if (res == -1)
+			res = -errno;
+		//fopen our file
+		fp = fopen(fpath, "w");
+		temp = fopen(tpath, "r");
+		//encrypt
+		do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
+		//close our file pointers
+		fclose(fp);
+		fclose(temp);
+	}
+	else
+	{
 	fd = open(fpath, O_WRONLY);
 	if (fd == -1)
 		return -errno;
@@ -443,8 +455,9 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	if (res == -1)
 		res = -errno;
 
+	
+	}
 	close(fd);
-	// }
 	return res;
 }
 

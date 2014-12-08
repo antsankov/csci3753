@@ -29,11 +29,22 @@ fuse-examples: $(FUSE_EXAMPLES)
 xattr-examples: $(XATTR_EXAMPLES)
 openssl-examples: $(OPENSSL_EXAMPLES)
 
+
+
+encrypt-fs: encrypt-fs.o aes-crypt.o 
+	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSFUSE) $(LLIBSOPENSSL)
+
+
+
+
+
+
 fusehello: fusehello.o
 	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSFUSE)
 
 fusexmp: fusexmp.o
 	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSFUSE)
+
 
 xattr-util: xattr-util.o
 	$(CC) $(LFLAGS) $^ -o $@
@@ -47,6 +58,10 @@ fusehello.o: fusehello.c
 fusexmp.o: fusexmp.c
 	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
 
+
+encrypt-fs.o: encrypt-fs.c aes-crypt.h
+	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
+
 xattr-util.o: xattr-util.c
 	$(CC) $(CFLAGS) $<
 
@@ -56,15 +71,7 @@ aes-crypt-util.o: aes-crypt-util.c aes-crypt.h
 aes-crypt.o: aes-crypt.c aes-crypt.h
 	$(CC) $(CFLAGS) $<
 
-encrypt-fs: encrypt-fs.o
-	$(CC) $(LFLAGS) $^ -o $@ $(LLIBSFUSE)
-
-encrypt-fs.o: encrypt-fs.c
-	$(CC) $(CFLAGS) $(CFLAGSFUSE) $<
-
 clean:
-	rm -f encrypt-fs.o
-	rm -f encrypt-fs
 	rm -f $(FUSE_EXAMPLES)
 	rm -f $(XATTR_EXAMPLES)
 	rm -f $(OPENSSL_EXAMPLES)
