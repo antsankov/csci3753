@@ -75,18 +75,30 @@ struct xmp_info
 
 static int fixPath(char fixedpath[PATH_MAX], const char *path)
 {
+
+
 	char *mir = XMP_DATA->mirror;
-	//printf("mirror directory = %s\n", mir);
+	// printf("before\n");
+	// printf("Path is %s\n",path );
+	// printf("FPath is %s\n",fixedpath );
 	//copy the mirrored directory into our mirrored path
-	strcpy(fixedpath, mir);
+	fixedpath = strcpy(fixedpath, mir);
+	// printf("middle\n");
+	// printf("Path is %s\n",path );
+	// printf("FPath is %s\n",fixedpath );
 	//concatenate our path
-	strcat(fixedpath, path);
+	fixedpath = strcat(fixedpath, path);
+	// printf("after\n");
+	// printf("Path is %s\n",path );
+	// printf("FPath is %s\n",fixedpath );
 	return 0;
 }
 
 //returns a file pointer given our fixedpath
-static FILE* tempfile(const char *fpath)
+static FILE* tempfile(char fpath[PATH_MAX])
+
 {
+	printf("hi everybody, tempfile checkin n");
 	char *tpath = "";
 	//copy the fixedpath into the temp path name
 	strcpy(tpath, fpath);
@@ -97,9 +109,10 @@ static FILE* tempfile(const char *fpath)
 
 //Checks flags if the file is encrypted
 //see xattr-util.c
-static int isenc(const char *path)
+static int isenc(char fixedpath[PATH_MAX])
 {
-	//TODO
+	printf("FPath is %s\n",fixedpath );
+	printf("isenc called!\n");
 	return 1;
 }
 
@@ -367,19 +380,42 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	int res;
 
 	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-	(void) fi;
-	//get the file descriptor
+	//char * fpath;
+	printf("about to call fixpath\n\n");
 
+
+	char *mir = XMP_DATA->mirror;
+	printf("before\n");
+	//copy the mirrored directory into our mirrored path
+	strcpy(fpath, mir);
+	printf("middle\n");
+	//concatenate our path
+	strcat(fpath, path);
+
+
+
+	//(void) fi;
+	//get the file descriptor
+	
 	//if the file is encrypted
+	//sleep(1);
+	printf("FPath is %s\n",fpath );
 	if(isenc(fpath)){
 		//fopen the file
+		printf("FPath is %s\n",fpath );
+		printf("about to open file\n");
 		fp = fopen(fpath, "r");
 		//create a new temp file
-		temp = tempfile(fpath);
+		printf("declaring a new variable\n");
+		char tpath[PATH_MAX];
+		strcpy(tpath, fpath);
+		printf("about to call tempfile");
+		temp = tempfile(tpath);
 		//decrypt into the temp file
+		printf("about to decrypt file");
 		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
 		//read that bullshit
+		printf("about to fseek");
 		fseek(temp, offset, SEEK_SET);
 		res = fread(buf, 1, size, temp);
 		if (res == -1)
@@ -419,23 +455,27 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	char fpath[PATH_MAX];
 	fixPath(fpath,path);
 
-	(void) fi;
+	//(void) fi;
 
 	if(isenc(path))
 	{
 		fp = fopen(fpath, "w");
 		//temp = tempfile(fpath);
-		//write into temp file
+		//create a new temp file
 		char tpath[PATH_MAX];
 		strcpy(tpath, fpath);
-		strcat(tpath, ".tmp");
-
-		fd = open(tpath, O_WRONLY);
-		res = pwrite(fd, buf, size, offset);
+		temp = tempfile(tpath);
+		//write into temp file
+		//char tpath[PATH_MAX];
+		//strcpy(tpath, fpath);
+		//strcat(tpath, ".tmp");
+		fp = fopen(fpath, "w");
+		//fd = open(tpath, O_WRONLY);
+		res = fwrite(buf, 1, size, temp);
 		if (res == -1)
 			res = -errno;
 		//fopen our file
-		fp = fopen(fpath, "w");
+		
 		temp = fopen(tpath, "r");
 		//encrypt
 		do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
