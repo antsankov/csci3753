@@ -98,13 +98,23 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 static FILE* tempfile(char fpath[PATH_MAX])
 
 {
-	printf("hi everybody, tempfile checkin n");
-	char *tpath = "";
+	FILE* tp;
+	printf("hi everybody, tempfile checkin in \n");
+	char *tpath;
 	//copy the fixedpath into the temp path name
 	strcpy(tpath, fpath);
 	//adds .tmp to the path name
 	strcat(tpath, ".tmp");
-	return creat(tpath, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	printf("value of tpath is %s \n",tpath);
+	tp = creat(tpath, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if(tp == NULL)
+	{
+		printf("null weiner \n");
+	}
+	printf("value of tp is %s \n",tp);
+	printf("hi everybody, tempfile checkin out \n");
+	return tp;
+
 }
 
 //Checks flags if the file is encrypted
@@ -406,11 +416,12 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		printf("about to open file\n");
 		fp = fopen(fpath, "r");
 		//create a new temp file
-		printf("declaring a new variable\n");
+		printf("fp is %s\n",fp);
 		char tpath[PATH_MAX];
 		strcpy(tpath, fpath);
-		printf("about to call tempfile");
+		printf("about to call tempfile\n");
 		temp = tempfile(tpath);
+		printf("temp is %s\n",temp);
 		//decrypt into the temp file
 		printf("about to decrypt file");
 		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
