@@ -51,10 +51,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
+#include "aes-crypt.c"
+
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 
-#include "aes-crypt.h"
 
 #endif
 
@@ -81,6 +82,25 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 	//concatenate our path
 	strcat(fixedpath, path);
 	return 0;
+}
+
+//returns a file pointer given our fixedpath
+static FILE* tempfile(const char *fpath)
+{
+	char *tpath = "";
+	//copy the fixedpath into the temp path name
+	strcpy(tpath, fpath);
+	//adds .tmp to the path name
+	strcat(tpath, ".tmp");
+	return creat(tpath, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+}
+
+//Checks flags if the file is encrypted
+//see xattr-util.c
+static int isenc(const char *path)
+{
+	//TODO
+	return 1;
 }
 
 
@@ -337,28 +357,53 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 	return 0;
 }
 
+
+//big changes here
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
+	FILE *fp, *temp;
 	int fd;
 	int res;
 
 	char fpath[PATH_MAX];
 	fixPath(fpath,path);
-
 	(void) fi;
+	//get the file descriptor
+
+	//if the file is encrypted
+	if(isenc(fpath)){
+		//fopen the file
+		fopen(fpath, "r");
+		//create a new temp file
+		temp = tempfile(fpath);
+		//decrypt into the temp file
+		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
+		//read that bullshit
+		fseek(temp, offset, SEEK_SET);
+		res = fread(buf, 1, size, temp);
+		if (res == -1)
+			res = -errno;
+		//close our file pointers
+		fclose(fp);
+		fclose(temp);
+	}
+	//standard behavior
+	else
+	{
+
 	fd = open(fpath, O_RDONLY);
 	if (fd == -1)
 		return -errno;
-	//check flag
-	//		if the flag is not set / set to unencrypted, default read
-	//		otherwise
-	//pipe the buffer through the decryptor
+
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
 
 	close(fd);
+	
+	}
+	
 	return res;
 }
 
@@ -367,6 +412,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
+	FILE *fp, *temp;
 	int fd;
 	int res;
 
@@ -374,6 +420,19 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	fixPath(fpath,path);
 
 	(void) fi;
+
+	// if(isenc(path))
+	// {
+	// 	//fopen
+	// 	//create a temp file
+	// 	//decrypt into temp file
+	// 	//write into our temp file
+	// 	//fopen our file
+	// 	//encrypt
+	// 	//close our file pointers
+	// }
+	// else
+	// {
 	fd = open(fpath, O_WRONLY);
 	if (fd == -1)
 		return -errno;
@@ -385,6 +444,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		res = -errno;
 
 	close(fd);
+	// }
 	return res;
 }
 
