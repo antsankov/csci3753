@@ -1,0 +1,3 @@
+password = password
+mirrored directory = /home/samuel/Documents/sem5/os/csci3753/assignment5/mirror
+mountpoint = (null)

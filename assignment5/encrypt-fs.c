@@ -106,12 +106,8 @@ static FILE* tempfile(char fpath[PATH_MAX])
 	//adds .tmp to the path name
 	strcat(tpath, ".tmp");
 	printf("value of tpath is %s \n",tpath);
-	tp = creat(tpath, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if(tp == NULL)
-	{
-		printf("null weiner \n");
-	}
-	printf("value of tp is %s \n",tp);
+	tp = fopen(tpath,"a+");
+	printf("tp is %s \n", &tp);
 	printf("hi everybody, tempfile checkin out \n");
 	return tp;
 
@@ -421,14 +417,18 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		strcpy(tpath, fpath);
 		printf("about to call tempfile\n");
 		temp = tempfile(tpath);
-		printf("temp is %s\n",temp);
+		printf("temp is %s\n", &temp);
 		//decrypt into the temp file
-		printf("about to decrypt file");
+		printf("about to decrypt file\n");
 		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
 		//read that bullshit
-		printf("about to fseek");
+		printf("about to fseek\n");
 		fseek(temp, offset, SEEK_SET);
+		printf("done with seek\n");
+	
 		res = fread(buf, 1, size, temp);
+		printf("DONE WITH THE READ\n");
+		fflush(stdout);
 		if (res == -1)
 			res = -errno;
 		//close our file pointers
@@ -496,19 +496,19 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	}
 	else
 	{
-	fd = open(fpath, O_WRONLY);
-	if (fd == -1)
-		return -errno;
-	//set encrypted flag
-	//get the cipher text passing in the buf
-	//write the ciphertext to the file
-	res = pwrite(fd, buf, size, offset);
-	if (res == -1)
-		res = -errno;
-
-	
+		fd = open(fpath, O_WRONLY);
+		if (fd == -1)
+			return -errno;
+		//set encrypted flag
+		//get the cipher text passing in the buf
+		//write the ciphertext to the file
+		res = pwrite(fd, buf, size, offset);
+		if (res == -1)
+			res = -errno;
+		close(fd);	
 	}
-	close(fd);
+	printf("DONE WITH THE READ\n");
+	fflush(stdout);
 	return res;
 }
 
