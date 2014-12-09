@@ -95,22 +95,36 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 }
 
 //returns a file pointer given our fixedpath
-static FILE* tempfile(char fpath[PATH_MAX])
+static FILE* tempfile(const char fpath[PATH_MAX])
 
 {
-	FILE* tp;
+	// FILE* tp;
 	printf("hi everybody, tempfile checkin in \n");
-	char *tpath;
-	//copy the fixedpath into the temp path name
-	strcpy(tpath, fpath);
-	//adds .tmp to the path name
-	strcat(tpath, ".tmp");
-	printf("value of tpath is %s \n",tpath);
-	tp = fopen(tpath,"a+");
-	printf("tp is %s \n", &tp);
-	printf("hi everybody, tempfile checkin out \n");
-	return tp;
+	// char *tpath;
+	// //copy the fixedpath into the temp path name
+	// strcpy(tpath, fpath);
+	// //adds .tmp to the path name
+	// strcat(tpath, ".tmp");
+	// printf("value of tpath is %s \n",tpath);
+	// tp = fopen(tpath,"a+");
+	// printf("tp is %s \n", &tp);
+	// 
+	// return tp;
 
+}
+
+static char* tmp_path(const char* old_path, const char *suffix){
+    char* new_path;
+    int len=0;
+    len=strlen(old_path) + strlen(suffix) + 1;
+    new_path = malloc(sizeof(char)*len);
+    if(new_path == NULL){
+        return NULL;
+    }
+    new_path[0] = '\0';
+    strcat(new_path, old_path);
+    strcat(new_path, suffix);
+    return new_path;
 }
 
 //Checks flags if the file is encrypted
@@ -385,18 +399,12 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	int fd;
 	int res;
 
-	char fpath[PATH_MAX];
 	//char * fpath;
 	printf("about to call fixpath\n\n");
 
 
-	char *mir = XMP_DATA->mirror;
-	printf("before\n");
-	//copy the mirrored directory into our mirrored path
-	strcpy(fpath, mir);
-	printf("middle\n");
-	//concatenate our path
-	strcat(fpath, path);
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
 
 
 
@@ -409,31 +417,38 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	if(isenc(fpath)){
 		//fopen the file
 		printf("FPath is %s\n",fpath );
-		printf("about to open file\n");
-		fp = fopen(fpath, "r");
+		//printf("about to open file\n");
+		fp = fopen(fpath, "rb");
 		//create a new temp file
-		printf("fp is %s\n",fp);
-		char tpath[PATH_MAX];
-		strcpy(tpath, fpath);
-		printf("about to call tempfile\n");
-		temp = tempfile(tpath);
-		printf("temp is %s\n", &temp);
+		//printf("fp is %s\n",fp);
+		// char tpath[PATH_MAX];
+		// strcpy(tpath, fpath);
+		// printf("about to call tempfile\n");
+
+
+
+		const char *temp_path = tmp_path(fpath, ".tmp");
+		temp = fopen(temp_path, "wb+");
+		printf("temp is %s\n", temp);
 		//decrypt into the temp file
 		printf("about to decrypt file\n");
+		
 		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
 		//read that bullshit
 		printf("about to fseek\n");
+		fflush(stdout);
 		fseek(temp, offset, SEEK_SET);
-		printf("done with seek\n");
+		//printf("done with seek\n");
 	
 		res = fread(buf, 1, size, temp);
-		printf("DONE WITH THE READ\n");
+		//printf("DONE WITH THE READ\n");
 		fflush(stdout);
 		if (res == -1)
 			res = -errno;
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
+		remove(temp_path);
 	}
 	//standard behavior
 	else
@@ -470,29 +485,30 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
 	if(isenc(path))
 	{
-		fp = fopen(fpath, "w");
+		fp = fopen(fpath, "rb+");
 		//temp = tempfile(fpath);
 		//create a new temp file
-		char tpath[PATH_MAX];
-		strcpy(tpath, fpath);
-		temp = tempfile(tpath);
+		const char *temp_path = tmp_path(fpath, ".tmp");
+		temp = fopen(temp_path, "wb+");
 		//write into temp file
 		//char tpath[PATH_MAX];
 		//strcpy(tpath, fpath);
 		//strcat(tpath, ".tmp");
-		fp = fopen(fpath, "w");
 		//fd = open(tpath, O_WRONLY);
 		res = fwrite(buf, 1, size, temp);
 		if (res == -1)
 			res = -errno;
-		//fopen our file
-		
-		temp = fopen(tpath, "r");
 		//encrypt
+		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
+
+		fseek(fp, offset, SEEK_SET);
+
+
 		do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
+		remove(temp_path);
 	}
 	else
 	{
@@ -507,8 +523,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 			res = -errno;
 		close(fd);	
 	}
-	printf("DONE WITH THE READ\n");
-	fflush(stdout);
+	
 	return res;
 }
 
