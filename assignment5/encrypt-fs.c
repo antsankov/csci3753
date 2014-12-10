@@ -94,6 +94,54 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 	return 0;
 }
 
+
+#ifdef HAVE_SETXATTR
+static int xmp_setxattr(const char *path, const char *name, const char *value,
+			size_t size, int flags)
+{
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lsetxattr(fpath, name, value, size, flags);
+	if (res == -1)
+		return -errno;
+	return 0;
+}
+
+static int xmp_getxattr(const char *path, const char *name, char *value,
+			size_t size)
+{
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lgetxattr(fpath, name, value, size);
+	if (res == -1)
+		return -errno;
+	return res;
+}
+
+static int xmp_listxattr(const char *path, char *list, size_t size)
+{
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+	int res = llistxattr(fpath, list, size);
+	if (res == -1)
+		return -errno;
+	return res;
+}
+
+static int xmp_removexattr(const char *path, const char *name)
+{
+	char fpath[PATH_MAX];
+	fixPath(fpath,path);
+
+	int res = lremovexattr(fpath, name);
+	if (res == -1)
+		return -errno;
+	return 0;
+}
+#endif /* HAVE_SETXATTR */
+
 //returns the path of the temp file 
 static char* tmp_path(const char* old_path, const char *suffix){
     char* new_path;
@@ -111,14 +159,7 @@ static char* tmp_path(const char* old_path, const char *suffix){
     return new_path;
 }
 
-//Checks flags if the file is encrypted
-//see xattr-util.c
-static int isenc(char fixedpath[PATH_MAX])
-{
-	printf("FPath is %s\n",fixedpath );
-	printf("isenc called!\n");
-	return 1;
-}
+
 
 
 /* gets the characteristics of a file from lstat and stores them.*/
@@ -133,6 +174,35 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	if (res == -1)
 		return -errno;
 
+	return 0;
+}
+
+//Checks flags if the file is encrypted
+//see xattr-util.c
+static int isenc(const char *path)
+{
+	ssize_t valuelength;
+	char* value;
+	
+	//get the length of the memory space for the attribute
+	valuelength = xmp_getxattr(path, "user.encrypted", NULL, 0);
+	if (valuelength < 0) { 
+		return -errno;
+	}
+	
+	//allocate space for the value
+	value = malloc(sizeof(*value)*(valuelength+1));
+	
+	//get the value of the attribute
+	
+	valuelength = xmp_getxattr(path, ENCRYPT, value, valuelength);
+
+    value[valuelength] = '\0';
+	
+	//check if it is encrypted
+	if (!strcmp(value, "true")){
+		return 1;
+	}
 	return 0;
 }
 
@@ -481,19 +551,25 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		//write into temp file
 		
 		printf("Password in WRITE is: %s\n", XMP_DATA->password);
-		// do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
-
-		fseek(fp, 0, SEEK_SET);
-
+		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
+		fclose(fp);
+		//travel to the offset we want to write to in the file located in memory stream
+		fseek(temp, offset, SEEK_SET);
 		size_t templen = ftell(temp);
 
-		res = fwrite(buf, 1, size, temp);
+		res = fwrite(buf, sizeof(char), size, temp);
 		if (res == -1)
 			res = -errno;
 		fflush(temp);
-		
-		int crypt = do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
-		printf("This is crip : %d\n", crypt);
+		//fclose(temp);
+		fp = fopen(fpath, "wb+");
+		fseek(temp, 0, SEEK_SET);
+		//temp = fopen(temp_path, "w");
+		if(!do_crypt(temp, fp, ENCRYPT, XMP_DATA->password))
+		{
+				fprintf(stderr, "do _crypt failed\n");
+		}
+		//printf("This is crip : %d\n", crypt);
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
@@ -569,53 +645,6 @@ static int xmp_fsync(const char *path, int isdatasync,
 	(void) fi;
 	return 0;
 }
-
-#ifdef HAVE_SETXATTR
-static int xmp_setxattr(const char *path, const char *name, const char *value,
-			size_t size, int flags)
-{
-	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-
-	int res = lsetxattr(fpath, name, value, size, flags);
-	if (res == -1)
-		return -errno;
-	return 0;
-}
-
-static int xmp_getxattr(const char *path, const char *name, char *value,
-			size_t size)
-{
-	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-
-	int res = lgetxattr(fpath, name, value, size);
-	if (res == -1)
-		return -errno;
-	return res;
-}
-
-static int xmp_listxattr(const char *path, char *list, size_t size)
-{
-	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-	int res = llistxattr(fpath, list, size);
-	if (res == -1)
-		return -errno;
-	return res;
-}
-
-static int xmp_removexattr(const char *path, const char *name)
-{
-	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-
-	int res = lremovexattr(fpath, name);
-	if (res == -1)
-		return -errno;
-	return 0;
-}
-#endif /* HAVE_SETXATTR */
 
 static struct fuse_operations xmp_oper = {
 	.getattr	= xmp_getattr,
