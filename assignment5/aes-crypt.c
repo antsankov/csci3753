@@ -63,36 +63,40 @@ extern int do_crypt(FILE* in, FILE* out, int action, char* key_str){
 
     /* Loop through Input File*/
     for(;;){
-	/* Read Block */
-	inlen = fread(inbuf, sizeof(*inbuf), BLOCKSIZE, in);
-	if(inlen <= 0){
-	    /* EOF -> Break Loop */
-	    break;
-	}
-	
-	/* If in cipher mode, perform cipher transform on block */
-	if(action >= 0){
-	    if(!EVP_CipherUpdate(&ctx, outbuf, &outlen, inbuf, inlen))
-		{
+		/* Read Block */
+		inlen = fread(inbuf, sizeof(*inbuf), BLOCKSIZE, in);
+		printf("Inbuf = %s\n",inbuf );
+		printf("in = %s\n", in);
+		printf("inlentgthth = %d\n", inlen);
+		if(inlen <= 0){
+		    /* EOF -> Break Loop */
+		    break;
+		}
+		
+		/* If in cipher mode, perform cipher transform on block */
+		if(action >= 0){
+		    if(!EVP_CipherUpdate(&ctx, outbuf, &outlen, inbuf, inlen))
+			{
+			    /* Error */
+			    EVP_CIPHER_CTX_cleanup(&ctx);
+			    return 0;
+			}
+		}
+		/* If in pass-through mode. copy block as is */
+		else{
+		    memcpy(outbuf, inbuf, inlen);
+		    outlen = inlen;
+		}
+
+		/* Write Block */
+		writelen = fwrite(outbuf, sizeof(*outbuf), outlen, out);
+		printf("outbuf is: %s\n",outbuf );
+		if(writelen != outlen){
 		    /* Error */
+		    perror("fwrite error");
 		    EVP_CIPHER_CTX_cleanup(&ctx);
 		    return 0;
 		}
-	}
-	/* If in pass-through mode. copy block as is */
-	else{
-	    memcpy(outbuf, inbuf, inlen);
-	    outlen = inlen;
-	}
-
-	/* Write Block */
-	writelen = fwrite(outbuf, sizeof(*outbuf), outlen, out);
-	if(writelen != outlen){
-	    /* Error */
-	    perror("fwrite error");
-	    EVP_CIPHER_CTX_cleanup(&ctx);
-	    return 0;
-	}
     }
     
     /* If in cipher mode, handle necessary padding */

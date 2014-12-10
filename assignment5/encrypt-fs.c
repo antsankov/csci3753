@@ -94,33 +94,17 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 	return 0;
 }
 
-//returns a file pointer given our fixedpath
-static FILE* tempfile(const char fpath[PATH_MAX])
-
-{
-	// FILE* tp;
-	printf("hi everybody, tempfile checkin in \n");
-	// char *tpath;
-	// //copy the fixedpath into the temp path name
-	// strcpy(tpath, fpath);
-	// //adds .tmp to the path name
-	// strcat(tpath, ".tmp");
-	// printf("value of tpath is %s \n",tpath);
-	// tp = fopen(tpath,"a+");
-	// printf("tp is %s \n", &tp);
-	// 
-	// return tp;
-
-}
-
+//returns the path of the temp file 
 static char* tmp_path(const char* old_path, const char *suffix){
     char* new_path;
     int len=0;
     len=strlen(old_path) + strlen(suffix) + 1;
     new_path = malloc(sizeof(char)*len);
+    
     if(new_path == NULL){
         return NULL;
     }
+
     new_path[0] = '\0';
     strcat(new_path, old_path);
     strcat(new_path, suffix);
@@ -406,64 +390,68 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	char fpath[PATH_MAX];
 	fixPath(fpath,path);
 
-
-
-	//(void) fi;
-	//get the file descriptor
-	
-	//if the file is encrypted
-	//sleep(1);
-	printf("FPath is %s\n",fpath );
 	if(isenc(fpath)){
-		//fopen the file
-		printf("FPath is %s\n",fpath );
-		//printf("about to open file\n");
+
+		printf("FPath of file to open: %s\n",fpath );
+		
 		fp = fopen(fpath, "rb");
+
 		//create a new temp file
-		//printf("fp is %s\n",fp);
+		printf("fp is %s\n",fp);
 		// char tpath[PATH_MAX];
 		// strcpy(tpath, fpath);
 		// printf("about to call tempfile\n");
 
-
-
+		//string for our temp path 
 		const char *temp_path = tmp_path(fpath, ".tmp");
+		printf("temp path is %s\n", temp_path);
+		
+		//this tries to open our temp path, and if it doesn't exist it creates it 
 		temp = fopen(temp_path, "wb+");
 		printf("temp is %s\n", temp);
+		
 		//decrypt into the temp file
 		printf("about to decrypt file\n");
 		
-		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
+		int crypt = do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
 		//read that bullshit
-		printf("about to fseek\n");
+		printf("Crypt is: %d\n",crypt);
 		fflush(stdout);
-		fseek(temp, offset, SEEK_SET);
-		//printf("done with seek\n");
+
+		//Horatius territory
+		fseek(temp, 0, SEEK_END);
+		size_t templen = ftell(temp);
+		fseek(temp, 0, SEEK_SET);
+		fprintf(stderr, "Read: size given by read: %zu\nsize of tmpFile: %zu\nsize of offset: %zu\n", size, templen, offset);
+		/* Read the decrypted contents of original file to the application widow */
+		res = fread(buf, 1, templen, temp);
+		//Horatius out
+
+		// fseek(temp, offset, SEEK_SET);
+		// //printf("done with seek\n");
 	
-		res = fread(buf, 1, size, temp);
-		//printf("DONE WITH THE READ\n");
+		// res = fread(buf, 1, size, temp);
+		// //printf("DONE WITH THE READ\n");
 		fflush(stdout);
 		if (res == -1)
 			res = -errno;
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
-		remove(temp_path);
+		//remove(temp_path);
 	}
 	//standard behavior
 	else
 	{
+		fd = open(fpath, O_RDONLY);
+		if (fd == -1)
+			return -errno;
 
-	fd = open(fpath, O_RDONLY);
-	if (fd == -1)
-		return -errno;
+		res = pread(fd, buf, size, offset);
+		if (res == -1)
+			res = -errno;
 
-	res = pread(fd, buf, size, offset);
-	if (res == -1)
-		res = -errno;
-
-	close(fd);
-	
+		close(fd);
 	}
 	
 	return res;
@@ -485,30 +473,31 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
 	if(isenc(path))
 	{
+		/*file we want to actually read, this is encrypted!*/
 		fp = fopen(fpath, "rb+");
-		//temp = tempfile(fpath);
-		//create a new temp file
+
 		const char *temp_path = tmp_path(fpath, ".tmp");
 		temp = fopen(temp_path, "wb+");
 		//write into temp file
-		//char tpath[PATH_MAX];
-		//strcpy(tpath, fpath);
-		//strcat(tpath, ".tmp");
-		//fd = open(tpath, O_WRONLY);
+		
+		printf("Password in WRITE is: %s\n", XMP_DATA->password);
+		// do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
+
+		fseek(fp, 0, SEEK_SET);
+
+		size_t templen = ftell(temp);
+
 		res = fwrite(buf, 1, size, temp);
 		if (res == -1)
 			res = -errno;
-		//encrypt
-		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
-
-		fseek(fp, offset, SEEK_SET);
-
-
-		do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
+		fflush(temp);
+		
+		int crypt = do_crypt(temp, fp, ENCRYPT, XMP_DATA->password);
+		printf("This is crip : %d\n", crypt);
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
-		remove(temp_path);
+		// remove(temp_path);
 	}
 	else
 	{
