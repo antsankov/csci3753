@@ -25,15 +25,6 @@
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
 
-
-//encryption constants
-#define ENCRYPT 1
-#define DECRYPT 0
-#define PASS -1
-//some numbers
-#define PATH_MAX 255
-
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -55,33 +46,6 @@
 #include <sys/xattr.h>
 #endif
 
-
-
-struct xmp_info
-{
-	//our mountpoint
-	char *mountpoint;
-	//mirrored directory path
-	char *mirror;
-	//password for encryption/decryption
-	char *password;
-};
-
-#define XMP_DATA ((struct xmp_info *) fuse_get_context()->private_data)
-
-static int fixPath(char fixedpath[PATH_MAX], const char *path)
-{
-	char *mir = XMP_DATA->mirror;
-	printf("mirror directory = %s\n", mir);
-	//copy the mirrored directory into our mirrored path
-	strcpy(fixedpath, mir);
-	//concatenate our path
-	strcat(fixedpath, path);
-	return 0;
-}
-
-
-/* gets the characteristics of a file from lstat and stores them.*/
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -166,19 +130,11 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
-	char fpath[PATH_MAX];
-	fixPath(fpath,path);
-	res = mkdir(fpath, mode);
-	
-	//this checks if it can make a directory 
+
+	res = mkdir(path, mode);
 	if (res == -1)
 		return -errno;
-	
-	//do any function calls here
-	printf("PAATH IS %s\n",path );
-	printf("FIX PATH IS %s\n",realpath(path,NULL));
 
-	printf("%s\n", "I AM MAKING A DIRECTORY!" );
 	return 0;
 }
 
@@ -309,10 +265,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
 		return -errno;
-	//check flag
-	//		if the flag is not set / set to unencrypted, default read
-	//		otherwise
-	//pipe the buffer through the decryptor
+
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
@@ -321,8 +274,6 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	return res;
 }
 
-
-//writes to a file
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
@@ -333,9 +284,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		return -errno;
-	//set encrypted flag
-	//get the cipher text passing in the buf
-	//write the ciphertext to the file
+
 	res = pwrite(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
@@ -459,39 +408,8 @@ static struct fuse_operations xmp_oper = {
 #endif
 };
 
-//Tutorial by Joseph J Pfeiffer at
-//cs.nmsu.edu/~pfeiffer/fuse-tutorial
-//USAGE: ./pa5-encfs <Key Phrase> <Mirror Directory> <Mount Point>
-//sudo ./fusexmp password mirror mnt
 int main(int argc, char *argv[])
 {
 	umask(0);
-	//Make sure the proper number of arguments are passed in
-	if(argc < 4){
-		printf("%s\n", "ERROR: NOT ENOUGH ARGUMENTS." );
-		return -errno;
-	}
-
-	//initialize a struct to hold mirrored directory and password
-	struct xmp_info *xmp_data;
-	xmp_data = malloc(sizeof(struct xmp_info));
-	//TODO catch for any errors calling malloc
-	xmp_data->mountpoint = realpath(argv[3],NULL);
-	//stores the path to the mirroed directory
-	xmp_data->mirror = realpath(argv[2], NULL);
-	//Stores the password
-	xmp_data->password = argv[1];
-
-	//passwrod 
-
-	printf("password = %s\n", xmp_data->password);
-	printf("mirrored directory = %s\n", xmp_data->mirror);
-	printf("mountpoint = %s\n", xmp_data->mountpoint);
-
-	//fuse will now execute normally. It will get it's normal paramters passed in the correct order.
-	argv[1] = argv[3]; // store the mountpoint as the first argument
-	argv[2] = argv[4]; // moving the option flag to the second argument
-	argc -= 2; //reduces the total number of passed aruments in.
-	//call the fuse_main, passing in our data as well.
-	return fuse_main(argc, argv, &xmp_oper, xmp_data);
+	return fuse_main(argc, argv, &xmp_oper, NULL);
 }

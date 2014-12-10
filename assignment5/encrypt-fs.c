@@ -108,7 +108,7 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 	return 0;
 }
 
-static int xmp_getxattr(const char *path, const char *name, char *value,
+static int xmp_getxattr(const char *path, const char *name,char *value,
 			size_t size)
 {
 	char fpath[PATH_MAX];
@@ -446,16 +446,11 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 
 
 //big changes here
-static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
-		    struct fuse_file_info *fi)
+static int xmp_read(const char *path, char *buf, size_t size, off_t offset)
 {
 	FILE *fp, *temp;
 	int fd;
 	int res;
-
-	//char * fpath;
-	printf("about to call fixpath\n\n");
-
 
 	char fpath[PATH_MAX];
 	fixPath(fpath,path);
@@ -464,13 +459,9 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
 		printf("FPath of file to open: %s\n",fpath );
 		
+		//create a new temp file		
 		fp = fopen(fpath, "rb");
 
-		//create a new temp file
-		printf("fp is %s\n",fp);
-		// char tpath[PATH_MAX];
-		// strcpy(tpath, fpath);
-		// printf("about to call tempfile\n");
 
 		//string for our temp path 
 		const char *temp_path = tmp_path(fpath, ".tmp");
@@ -478,7 +469,6 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		
 		//this tries to open our temp path, and if it doesn't exist it creates it 
 		temp = fopen(temp_path, "wb+");
-		printf("temp is %s\n", temp);
 		
 		//decrypt into the temp file
 		printf("about to decrypt file\n");
@@ -488,27 +478,21 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		printf("Crypt is: %d\n",crypt);
 		fflush(stdout);
 
-		//Horatius territory
 		fseek(temp, 0, SEEK_END);
 		size_t templen = ftell(temp);
 		fseek(temp, 0, SEEK_SET);
 		fprintf(stderr, "Read: size given by read: %zu\nsize of tmpFile: %zu\nsize of offset: %zu\n", size, templen, offset);
 		/* Read the decrypted contents of original file to the application widow */
 		res = fread(buf, 1, templen, temp);
-		//Horatius out
 
-		// fseek(temp, offset, SEEK_SET);
-		// //printf("done with seek\n");
-	
-		// res = fread(buf, 1, size, temp);
-		// //printf("DONE WITH THE READ\n");
 		fflush(stdout);
 		if (res == -1)
 			res = -errno;
+		
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
-		//remove(temp_path);
+		remove(temp_path);
 	}
 	//standard behavior
 	else
@@ -530,8 +514,9 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
 //writes to a file
 static int xmp_write(const char *path, const char *buf, size_t size,
-		     off_t offset, struct fuse_file_info *fi)
+		     off_t offset)
 {
+
 	FILE *fp, *temp;
 	int fd;
 	int res;
@@ -549,13 +534,14 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		const char *temp_path = tmp_path(fpath, ".tmp");
 		temp = fopen(temp_path, "wb+");
 		//write into temp file
-		
-		printf("Password in WRITE is: %s\n", XMP_DATA->password);
+
+
 		do_crypt(fp, temp, DECRYPT, XMP_DATA->password);
 		fclose(fp);
+		
 		//travel to the offset we want to write to in the file located in memory stream
 		fseek(temp, offset, SEEK_SET);
-		size_t templen = ftell(temp);
+		//size_t templen = ftell(temp);
 
 		res = fwrite(buf, sizeof(char), size, temp);
 		if (res == -1)
@@ -564,16 +550,17 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		//fclose(temp);
 		fp = fopen(fpath, "wb+");
 		fseek(temp, 0, SEEK_SET);
+		
 		//temp = fopen(temp_path, "w");
 		if(!do_crypt(temp, fp, ENCRYPT, XMP_DATA->password))
 		{
 				fprintf(stderr, "do _crypt failed\n");
 		}
-		//printf("This is crip : %d\n", crypt);
+
 		//close our file pointers
 		fclose(fp);
 		fclose(temp);
-		// remove(temp_path);
+		remove(temp_path);
 	}
 	else
 	{
@@ -711,5 +698,7 @@ int main(int argc, char *argv[])
 	argv[2] = argv[4]; // moving the option flag to the second argument
 	argc -= 2; //reduces the total number of passed aruments in.
 	//call the fuse_main, passing in our data as well.
-	return fuse_main(argc, argv, &xmp_oper, xmp_data);
+	fuse_main(argc, argv, &xmp_oper, xmp_data);
+	free(xmp_data);
+	return 0;
 }
