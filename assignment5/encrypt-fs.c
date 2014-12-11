@@ -78,19 +78,10 @@ static int fixPath(char fixedpath[PATH_MAX], const char *path)
 
 
 	char *mir = XMP_DATA->mirror;
-	// printf("before\n");
-	// printf("Path is %s\n",path );
-	// printf("FPath is %s\n",fixedpath );
 	//copy the mirrored directory into our mirrored path
 	fixedpath = strcpy(fixedpath, mir);
-	// printf("middle\n");
-	// printf("Path is %s\n",path );
-	// printf("FPath is %s\n",fixedpath );
 	//concatenate our path
 	fixedpath = strcat(fixedpath, path);
-	// printf("after\n");
-	// printf("Path is %s\n",path );
-	// printf("FPath is %s\n",fixedpath );
 	return 0;
 }
 
@@ -143,7 +134,7 @@ static int xmp_removexattr(const char *path, const char *name)
 #endif /* HAVE_SETXATTR */
 
 //returns the path of the temp file 
-static char* tmp_path(const char* old_path, const char *suffix){
+static char* tmp_path(const char* old_path, const char *suffix, const * return_path){
     char* new_path;
     int len=0;
     len=strlen(old_path) + strlen(suffix) + 1;
@@ -156,7 +147,11 @@ static char* tmp_path(const char* old_path, const char *suffix){
     new_path[0] = '\0';
     strcat(new_path, old_path);
     strcat(new_path, suffix);
-    return new_path;
+    strcpy(return_path,new_path);
+    
+    //free it, so we don't end up with a memory leak
+    free(new_path);
+    return 0;
 }
 
 
@@ -201,8 +196,10 @@ static int isenc(const char *path)
 	
 	//check if it is encrypted
 	if (!strcmp(value, "true")){
+		free(value);
 		return 1;
 	}
+	free(value);
 	return 0;
 }
 
@@ -453,7 +450,12 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset)
 	int res;
 
 	char fpath[PATH_MAX];
+
+	//this will be our new path we will use
+	char temp_path[PATH_MAX];
+
 	fixPath(fpath,path);
+
 
 	if(isenc(fpath)){
 
@@ -462,9 +464,8 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset)
 		//create a new temp file		
 		fp = fopen(fpath, "rb");
 
-
 		//string for our temp path 
-		const char *temp_path = tmp_path(fpath, ".tmp");
+		tmp_path(fpath, ".tmp",temp_path);
 		printf("temp path is %s\n", temp_path);
 		
 		//this tries to open our temp path, and if it doesn't exist it creates it 
@@ -522,6 +523,10 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	int res;
 
 	char fpath[PATH_MAX];
+
+	//our new path to work with 
+	char temp_path[PATH_MAX];
+
 	fixPath(fpath,path);
 
 	//(void) fi;
@@ -531,7 +536,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		/*file we want to actually read, this is encrypted!*/
 		fp = fopen(fpath, "rb+");
 
-		const char *temp_path = tmp_path(fpath, ".tmp");
+		tmp_path(fpath, ".tmp",temp_path);
 		temp = fopen(temp_path, "wb+");
 		//write into temp file
 
@@ -677,13 +682,21 @@ int main(int argc, char *argv[])
 		return -errno;
 	}
 
+	/*I have to include these for the realpath function. If we put NULL as the second argument, it will allocate the memory and never deallocate it (possible bug?) 
+
+	These two arrays are guarenteed to deallocate the memory when the program ends. Valgrind says there is no memory leaks
+	*/
+
+	char mnt[PATH_MAX + 1];
+	char mir[PATH_MAX + 1];
+
 	//initialize a struct to hold mirrored directory and password
 	struct xmp_info *xmp_data;
 	xmp_data = malloc(sizeof(struct xmp_info));
 	//TODO catch for any errors calling malloc
-	xmp_data->mountpoint = realpath(argv[3],NULL);
+	xmp_data->mountpoint = realpath(argv[3],mnt);
 	//stores the path to the mirroed directory
-	xmp_data->mirror = realpath(argv[2], NULL);
+	xmp_data->mirror = realpath(argv[2], mir);
 	//Stores the password
 	xmp_data->password = argv[1];
 
